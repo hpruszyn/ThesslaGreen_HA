@@ -144,6 +144,7 @@ class RekuperatorOperationModeSelect(SelectEntity):
                 self._address, code
             )
             if success:
+                self.coordinator.apply_optimistic(self._address, code)
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception("Exception during operating mode selection: %s", e)
@@ -200,6 +201,7 @@ class RekuperatorTrybSelect(SelectEntity):
 
             success = await self.coordinator.controller.write_register(self._address, code)
             if success:
+                self.coordinator.apply_optimistic(self._address, code)
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -265,6 +267,7 @@ class RekuperatorSezonSelect(SelectEntity):
 
             success = await self.coordinator.controller.write_register(self._address, code)
             if success:
+                self.coordinator.apply_optimistic(self._address, code)
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -321,6 +324,7 @@ class RekuperatorErvTrybSelect(SelectEntity):
                 self._address, code
             )
             if success:
+                self.coordinator.apply_optimistic(self._address, code)
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -380,6 +384,7 @@ class RekuperatorKomfortSelect(SelectEntity):
                 self._address, code
             )
             if success:
+                self.coordinator.apply_optimistic(self._address, code)
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
