@@ -12,7 +12,7 @@ import os
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["sensor", "switch", "binary_sensor", "select", "number"]
+PLATFORMS = ["sensor", "switch", "binary_sensor", "select", "number", "button"]
 
 # Lovelace card adapted from bwojtyca/ThesslaGreen_HA.
 CARD_VERSION = "3.2.1-hp1"

@@ -70,6 +70,7 @@ async def async_get_config_entry_diagnostics(
             "coil_count": len(data.coil),
             "discrete_count": len(data.discrete),
         },
+        "validation": coordinator.last_validation_report,
         "modbus": {
             "holding": _safe_holding(data.holding),
             "input": _safe_input(data.input),

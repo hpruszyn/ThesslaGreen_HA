@@ -66,6 +66,28 @@ class ThesslaGreenModbusController:
         self._schedule_cache: dict[int, int] = {}
         self._poll_count = 0
 
+        # Addresses explicitly used by this integration. Validation probes these
+        # one-by-one on demand; it never brute-forces unknown Modbus ranges.
+        self._known_addresses = {
+            "holding": sorted({
+                16, 44, 72, 100, 128, 156, 180,
+                256, 257, 1280, 1281, 1282, 1283,
+                4192, 4198, 4208, 4209, 4210, 4212, 4213,
+                4224, 4228, 4230, 4232, 4233, 4237, 4239,
+                4304, 4305, 4320, 4321, 4322, 4323, 4330,
+                4354, 4355, 4384, 4387, 4482, 4483, 4660, 4662,
+                4704, 4711, 8190, 8192, 8193, 8208,
+                8222, 8223, 8330, 8331, 8444,
+            }),
+            "input": sorted({
+                0, 1, 4, 16, 17, 18, 19, 22,
+                24, 25, 26, 27, 28, 29,
+                271, 272, 273, 274, 275, 276, 277,
+            }),
+            "coil": [9, 10, 11],
+            "discrete": list(range(22)),
+        }
+
     async def stop(self):
         async with self._controller_lock:
             _LOGGER.info("Stopping Modbus controller for %s:%d", self._host, self._port)
@@ -262,6 +284,48 @@ class ThesslaGreenModbusController:
                 discrete=data_discrete,
                 update_interval=round(self._last_update_interval, 2)
             )
+
+    async def validate_known_registers(self) -> dict[str, dict[str, list[int]]]:
+        """Validate only Modbus addresses already known to the integration."""
+        async with self._controller_lock:
+            await self._ensure_connected()
+
+            report = {
+                kind: {"supported": [], "unsupported": [], "indeterminate": []}
+                for kind in self._known_addresses
+            }
+            functions = {
+                "holding": self._client.read_holding_registers,
+                "input": self._client.read_input_registers,
+                "coil": self._client.read_coils,
+                "discrete": self._client.read_discrete_inputs,
+            }
+
+            for kind, addresses in self._known_addresses.items():
+                func = functions[kind]
+                for address in addresses:
+                    try:
+                        result = await func(
+                            address=address,
+                            count=1,
+                            device_id=self._slave,
+                        )
+                    except Exception as error:
+                        _LOGGER.debug(
+                            "Validation %s %d indeterminate: %s",
+                            kind,
+                            address,
+                            error,
+                        )
+                        report[kind]["indeterminate"].append(address)
+                        continue
+
+                    if result is None or result.isError():
+                        report[kind]["unsupported"].append(address)
+                    else:
+                        report[kind]["supported"].append(address)
+
+            return report
 
     async def write_register(self, address: int, value: int) -> bool:
         async with self._controller_lock:
