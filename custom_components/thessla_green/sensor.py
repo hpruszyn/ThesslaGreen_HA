@@ -180,7 +180,7 @@ class PackedFilterDateSensor(SensorEntity):
         self._slave = slave
         self._address = address
         self._attr_name = name
-        self._attr_unique_id = f"thessla_filter_date_{slave}_{address}"
+        self._attr_unique_id = f"thessla_sensor_{slave}_{address}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{slave}")},
             "name": "Rekuperator Thessla",
