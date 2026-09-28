@@ -126,6 +126,7 @@ async def async_setup_entry(
         RekuEfficiencySensor(coordinator=coordinator, slave=slave),
         RekuRecoveryPowerSensor(coordinator=coordinator, slave=slave),
         RekuCOPSensor(coordinator=coordinator, slave=slave, power_entity=power_entity),
+        RekuScheduleSensor(coordinator=coordinator, slave=slave),
     ])
 
     async_add_entities(entities)
@@ -472,3 +473,86 @@ class RekuCOPSensor(_BaseComputedSensor):
 
         q_kw = 0.000335 * flow * (Ts - To)
         self._attr_native_value = round(q_kw / p_kw, 2) if q_kw > 0 else None
+
+
+class RekuScheduleSensor(SensorEntity):
+    """Weekly AUTO schedule decoded from holding registers 16-180."""
+
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
+        self.coordinator = coordinator
+        self._slave = slave
+        self._attr_name = "Rekuperator Harmonogram"
+        self._attr_icon = "mdi:calendar-clock"
+        self._attr_unique_id = f"thessla_schedule_{slave}"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{slave}")},
+            "name": "Rekuperator Thessla",
+            "manufacturer": "Thessla Green",
+            "model": "Modbus Rekuperator",
+        }
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @staticmethod
+    def _bcd(value: int) -> int:
+        return (value >> 4) * 10 + (value & 0x0F)
+
+    def _time(self, value: int | None) -> str | None:
+        # 0x2400 / 0xA200 are documented disabled sentinels.
+        if value is None or value in (0x2400, 0xA200):
+            return None
+        hour = self._bcd(value >> 8)
+        minute = self._bcd(value & 0xFF)
+        if hour > 23 or minute > 59:
+            return None
+        return f"{hour:02d}:{minute:02d}"
+
+    def _season(self, holding, time_base: int, value_base: int, airing_base: int):
+        days = []
+        for day in range(7):
+            slots = []
+            for slot in range(4):
+                start = self._time(holding.get(time_base + day * 4 + slot))
+                intensity_temp = holding.get(value_base + day * 4 + slot)
+                if start is not None and intensity_temp is not None:
+                    slots.append(
+                        {
+                            "start": start,
+                            "i": intensity_temp >> 8,
+                            "t": (intensity_temp & 0xFF) / 2,
+                        }
+                    )
+            days.append(
+                {
+                    "slots": slots,
+                    "airing": self._time(holding.get(airing_base + day * 4)),
+                }
+            )
+        return days
+
+    @property
+    def native_value(self):
+        season = self.coordinator.safe_data.holding.get(4209)
+        return "Zima" if season == 1 else "Lato" if season == 0 else None
+
+    @property
+    def extra_state_attributes(self):
+        holding = self.coordinator.safe_data.holding
+        if 16 not in holding:
+            return {}
+        return {
+            "season": "winter" if holding.get(4209) == 1 else "summer",
+            "airing_duration": holding.get(4233),
+            "airing_intensity": holding.get(4230),
+            "summer": self._season(holding, 16, 72, 128),
+            "winter": self._season(holding, 44, 100, 156),
+        }
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )

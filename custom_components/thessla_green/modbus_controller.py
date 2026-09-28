@@ -55,6 +55,17 @@ class ThesslaGreenModbusController:
         self._coil_blocks = [(9, 3)]
         self._discrete_blocks = [(0, 22)]
 
+        # Weekly AUTO schedule, read on a slow cadence and cached. The schedule
+        # is configuration data, so there is no need to add ~11 extra Modbus
+        # requests to every normal poll.
+        self._schedule_blocks = [
+            (16, 16), (32, 16), (48, 16), (64, 16), (80, 16),
+            (96, 16), (112, 16), (128, 16), (144, 16), (160, 16),
+            (176, 5),
+        ]
+        self._schedule_cache: dict[int, int] = {}
+        self._poll_count = 0
+
     async def stop(self):
         async with self._controller_lock:
             _LOGGER.info("Stopping Modbus controller for %s:%d", self._host, self._port)
@@ -129,6 +140,25 @@ class ThesslaGreenModbusController:
                     start + count - 1,
                     registers,
                 )
+
+            # Weekly AUTO schedule: read on the first successful poll and then
+            # approximately every 10 minutes at the default 30 s scan interval.
+            # Partial schedule reads are tolerated and cached.
+            self._poll_count += 1
+            if not self._schedule_cache or self._poll_count % 20 == 0:
+                for start, count in self._schedule_blocks:
+                    registers = await self._try_read_registers(
+                        self._client.read_holding_registers,
+                        start,
+                        count,
+                    )
+                    if registers is None:
+                        continue
+                    for i, val in enumerate(registers):
+                        self._schedule_cache[start + i] = val
+
+            for address, value in self._schedule_cache.items():
+                data_holding.setdefault(address, value)
 
             # Read input registers
             for start, count in self._input_blocks:
