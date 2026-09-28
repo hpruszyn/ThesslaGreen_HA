@@ -26,6 +26,38 @@ class ThesslaGreenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             })
         )
 
+    async def async_step_reconfigure(self, user_input=None) -> FlowResult:
+        """Allow connection settings to be changed without re-adding the integration."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+
+        if user_input is not None:
+            return self.async_update_reload_and_abort(
+                entry,
+                data={**entry.data, **user_input},
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({
+                vol.Required(
+                    CONF_HOST,
+                    default=entry.data.get(CONF_HOST),
+                ): str,
+                vol.Required(
+                    CONF_PORT,
+                    default=entry.data.get(CONF_PORT, 8899),
+                ): int,
+                vol.Required(
+                    CONF_SLAVE,
+                    default=entry.data.get(CONF_SLAVE, 10),
+                ): int,
+                vol.Optional(
+                    CONF_SCAN_INTERVAL,
+                    default=entry.data.get(CONF_SCAN_INTERVAL, 30),
+                ): int,
+            }),
+        )
+
     @staticmethod
     def async_get_options_flow(config_entry):
         """Link to options flow handler."""
