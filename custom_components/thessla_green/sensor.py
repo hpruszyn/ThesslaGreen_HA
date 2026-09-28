@@ -26,6 +26,14 @@ SENSORS = [
     # Statusy i flagi
     {"name": "Rekuperator tryb pracy", "address": 4208, "input_type": "holding", "icon": "mdi:cog"},
     {"name": "Rekuperator speedmanual", "address": 4210, "input_type": "holding", "unit": "%", "icon": "mdi:speedometer"},
+
+    # Constant Flow (FC04 / input registers)
+    {"name": "Rekuperator Wydajność rzeczywista nawiew", "address": 272, "input_type": "input", "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wydajność rzeczywista wywiew", "address": 273, "input_type": "input", "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Przepływ CF nawiew", "address": 274, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan"},
+    {"name": "Rekuperator Przepływ CF wywiew", "address": 275, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan"},
+    {"name": "Rekuperator Intensywność min", "address": 276, "input_type": "input", "unit": "%", "icon": "mdi:speedometer-slow"},
+    {"name": "Rekuperator Intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer"},
 ]
 
 async def async_setup_entry(
