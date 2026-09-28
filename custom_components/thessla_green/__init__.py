@@ -5,6 +5,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN, CONF_HOST, CONF_PORT, CONF_SLAVE, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
+from .protocol import detect_capabilities
 
 import logging
 import os
@@ -52,15 +53,6 @@ async def _register_card(hass: HomeAssistant) -> None:
     _LOGGER.info("ThesslaGreen card registered from %s", CARD_URL)
 
 
-def _capabilities(coordinator: ThesslaGreenCoordinator) -> dict[str, bool]:
-    """Detect optional AirPack hardware from successfully read registers."""
-    data = coordinator.safe_data
-    return {
-        "cf": 271 in data.input,
-        "postheater": 4704 in data.holding and 4711 in data.holding,
-    }
-
-
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the integration and bundled Lovelace card."""
     await _register_card(hass)
@@ -102,7 +94,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "slave": slave,
         "scan_interval": update_interval,
-        "caps": _capabilities(coordinator),
+        "caps": detect_capabilities(coordinator.safe_data),
     }
 
     # Forward setup dla każdej platformy

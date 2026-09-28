@@ -13,6 +13,11 @@ from . import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
 from .entity_utils import register_available
+from .protocol import (
+    decode_packed_filter_date,
+    decode_register,
+    decode_schedule_season,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -173,13 +178,11 @@ class ModbusGenericSensor(SensorEntity):
         if raw_value is None or raw_value == 0x8000:
             return None
 
-        # Konwersja na signed int16
-        raw = raw_value
-        if raw > 0x7FFF:
-            raw -= 0x10000
-
-        value = raw * self._scale
-        return round(value, self._precision)
+        return decode_register(
+            raw_value,
+            scale=self._scale,
+            precision=self._precision,
+        )
 
     async def async_update(self):
         # Brak potrzeby ręcznego update — coordinator steruje
@@ -226,19 +229,14 @@ class PackedFilterDateSensor(SensorEntity):
         if raw is None:
             return None
 
-        day = raw & 0x1F
-        month = (raw >> 5) & 0x0F
-        year = 2000 + ((raw >> 9) & 0x7F)
-
-        try:
-            return date(year, month, day)
-        except ValueError:
+        value = decode_packed_filter_date(raw)
+        if value is None:
             _LOGGER.warning(
                 "Invalid packed filter replacement date in register %d: 0x%04X",
                 self._address,
                 raw,
             )
-            return None
+        return value
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -500,43 +498,6 @@ class RekuScheduleSensor(SensorEntity):
     def available(self) -> bool:
         return register_available(self.coordinator, 16, "holding")
 
-    @staticmethod
-    def _bcd(value: int) -> int:
-        return (value >> 4) * 10 + (value & 0x0F)
-
-    def _time(self, value: int | None) -> str | None:
-        # 0x2400 / 0xA200 are documented disabled sentinels.
-        if value is None or value in (0x2400, 0xA200):
-            return None
-        hour = self._bcd(value >> 8)
-        minute = self._bcd(value & 0xFF)
-        if hour > 23 or minute > 59:
-            return None
-        return f"{hour:02d}:{minute:02d}"
-
-    def _season(self, holding, time_base: int, value_base: int, airing_base: int):
-        days = []
-        for day in range(7):
-            slots = []
-            for slot in range(4):
-                start = self._time(holding.get(time_base + day * 4 + slot))
-                intensity_temp = holding.get(value_base + day * 4 + slot)
-                if start is not None and intensity_temp is not None:
-                    slots.append(
-                        {
-                            "start": start,
-                            "i": intensity_temp >> 8,
-                            "t": (intensity_temp & 0xFF) / 2,
-                        }
-                    )
-            days.append(
-                {
-                    "slots": slots,
-                    "airing": self._time(holding.get(airing_base + day * 4)),
-                }
-            )
-        return days
-
     @property
     def native_value(self):
         season = self.coordinator.safe_data.holding.get(4209)
@@ -551,8 +512,8 @@ class RekuScheduleSensor(SensorEntity):
             "season": "winter" if holding.get(4209) == 1 else "summer",
             "airing_duration": holding.get(4233),
             "airing_intensity": holding.get(4230),
-            "summer": self._season(holding, 16, 72, 128),
-            "winter": self._season(holding, 44, 100, 156),
+            "summer": decode_schedule_season(holding, 16, 72, 128),
+            "winter": decode_schedule_season(holding, 44, 100, 156),
         }
 
     async def async_added_to_hass(self):

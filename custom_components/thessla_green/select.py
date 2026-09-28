@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
 from .entity_utils import register_available
+from .protocol import OPERATION_MODES, SPECIAL_MODE_DETAILS, SPECIAL_MODE_READ_MAP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,39 +21,7 @@ MODES = {
     "Pusty Dom": 11,
 }
 
-# The controller can report several documented variants of the Airing function
-# depending on what triggered it. Collapse 3-9 to the canonical "Wietrzenie"
-# option so the select does not become unknown when airing is started by an
-# external input, humidity sensor, automatic mode or schedule.
-MODE_READ_MAP = {
-    0: "Brak trybu",
-    1: "Okap",
-    2: "Kominek",
-    3: "Wietrzenie",
-    4: "Wietrzenie",
-    5: "Wietrzenie",
-    6: "Wietrzenie",
-    7: "Wietrzenie",
-    8: "Wietrzenie",
-    9: "Wietrzenie",
-    10: "Okna",
-    11: "Pusty Dom",
-}
-
-SPECIAL_MODE_DETAILS = {
-    0: "Brak trybu",
-    1: "OKAP",
-    2: "KOMINEK",
-    3: "WIETRZENIE (przełącznik dzwonkowy)",
-    4: "WIETRZENIE (przełącznik ON/OFF)",
-    5: "H2O/WIETRZENIE (higrostat)",
-    6: "JP/WIETRZENIE (czujnik jakości powietrza)",
-    7: "WIETRZENIE (aktywacja ręczna)",
-    8: "WIETRZENIE (tryb automatyczny)",
-    9: "WIETRZENIE (harmonogram)",
-    10: "OTWARTE OKNA",
-    11: "PUSTY DOM",
-}
+MODE_READ_MAP = SPECIAL_MODE_READ_MAP
 
 SEASONS = {
     "Lato": 0,
@@ -68,12 +37,6 @@ ERV_MODES = {
 COMFORT_MODES = {
     "EKO": 0,
     "KOMFORT": 1,
-}
-
-OPERATION_MODES = {
-    "Automatyczny": 0,
-    "Manualny": 1,
-    "Chwilowy": 2,
 }
 
 async def async_setup_entry(

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from .coordinator import ThesslaGreenCoordinator
+from typing import Any
 
 
 def register_available(
-    coordinator: ThesslaGreenCoordinator,
+    coordinator: Any,
     address: int,
     input_type: str = "holding",
 ) -> bool:
