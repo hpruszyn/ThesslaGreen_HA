@@ -34,6 +34,23 @@ BINARY_SENSORS = [
     {"name": "Rekuperator lato zima", "address": 4209, "input_type": "holding", "icon_on": "mdi:sun-thermometer", "icon_off": "mdi:snowflake"},
     {"name": "Rekuperator Wymiana Filtrów", "address": 8444, "input_type": "holding", "icon_on": "mdi:air-filter", "icon_off": "mdi:fan-alert"},
     {"name": "Rekuperator Status ERV", "address": 4704, "input_type": "holding", "on_value": 0, "icon_on": "mdi:radiator", "icon_off": "mdi:radiator-off"},
+
+    # Fizyczne wejścia FC02 (Discrete Inputs)
+    {"name": "Rekuperator Presostat filtrów rekuperatora", "address": 18, "input_type": "discrete", "device_class": "problem"},
+    {"name": "Rekuperator Presostat filtra kanałowego", "address": 3, "input_type": "discrete", "device_class": "problem"},
+    {"name": "Rekuperator Wejście — zabezp. term. nagrzewnicy kanałowej", "address": 0, "input_type": "discrete", "device_class": "safety", "enabled_default": False},
+    {"name": "Rekuperator Wejście — zabezp. term. nagrzewnicy", "address": 19, "input_type": "discrete", "device_class": "safety", "enabled_default": False},
+    {"name": "Rekuperator Wejście — alarm P.POŻ", "address": 15, "input_type": "discrete", "device_class": "safety", "enabled_default": False},
+    {"name": "Rekuperator Wejście — OKAP", "address": 4, "input_type": "discrete", "icon_on": "mdi:scent", "icon_off": "mdi:scent-off", "enabled_default": False},
+    {"name": "Rekuperator Wejście — czujnik jakości powietrza", "address": 5, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — czujnik wilgotności H2O", "address": 6, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — włącznik Wietrzenie", "address": 7, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — AirS Wietrzenie", "address": 10, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — AirS bieg 3", "address": 11, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — AirS bieg 2", "address": 12, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — AirS bieg 1", "address": 13, "input_type": "discrete", "enabled_default": False},
+    {"name": "Rekuperator Wejście — włącznik Kominek", "address": 14, "input_type": "discrete", "icon_on": "mdi:fireplace", "icon_off": "mdi:fireplace-off", "enabled_default": False},
+    {"name": "Rekuperator Wejście — Pusty dom", "address": 21, "input_type": "discrete", "enabled_default": False},
 ]
 
 async def async_setup_entry(
@@ -68,9 +85,11 @@ class ModbusBinarySensor(BinarySensorEntity):
         icon_on: str | None = None,
         icon_off: str | None = None,
         on_value: int | None = None,
+        enabled_default: bool = True,
     ):
         self.coordinator = coordinator
         self._attr_name = name
+        self._attr_entity_registry_enabled_default = enabled_default
         self._address = address
         self._input_type = input_type
         self._slave = slave
@@ -80,7 +99,10 @@ class ModbusBinarySensor(BinarySensorEntity):
         # Jeśli nie podano, przyjmij standard: 1 = ON
         self._on_value = 1 if on_value is None else on_value
 
-        self._attr_unique_id = f"thessla_binary_sensor_{slave}_{address}"
+        if input_type == "discrete":
+            self._attr_unique_id = f"thessla_binary_sensor_{slave}_discrete_{address}"
+        else:
+            self._attr_unique_id = f"thessla_binary_sensor_{slave}_{address}"
         self._attr_device_class = device_class
 
         self._attr_device_info = {
@@ -97,8 +119,13 @@ class ModbusBinarySensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        if self._input_type == "coil":
-            val = self.coordinator.safe_data.coil.get(self._address)
+        if self._input_type in ("coil", "discrete"):
+            source = (
+                self.coordinator.safe_data.discrete
+                if self._input_type == "discrete"
+                else self.coordinator.safe_data.coil
+            )
+            val = source.get(self._address)
             if val is None:
                 return None
             try:
