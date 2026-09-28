@@ -91,13 +91,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to fetch initial data: %s", e)
         return False
 
+    coordinator.capabilities.update(
+        detect_capabilities(coordinator.safe_data)
+    )
+
     # Zapisywanie instancji w hass.data
     hass.data[DOMAIN][entry.entry_id] = {
         "controller": controller,
         "coordinator": coordinator,
         "slave": slave,
         "scan_interval": update_interval,
-        "caps": detect_capabilities(coordinator.safe_data),
+        "caps": coordinator.capabilities,
     }
 
     # Forward setup dla każdej platformy

@@ -114,9 +114,67 @@ def decode_schedule_season(
     return days
 
 
-def detect_capabilities(data) -> dict[str, bool]:
-    """Detect optional functions from registers present in the latest poll."""
+def _register_supported(
+    data,
+    register_type: str,
+    address: int,
+    validation: dict | None = None,
+) -> bool:
+    """Resolve support from explicit validation first, then latest poll data."""
+    if validation:
+        section = validation.get(register_type, {})
+        if address in section.get("supported", []):
+            return True
+        if address in section.get("unsupported", []):
+            return False
+
+    source = {
+        "holding": data.holding,
+        "input": data.input,
+        "coil": data.coil,
+        "discrete": data.discrete,
+    }[register_type]
+    return address in source
+
+
+def detect_capabilities(
+    data,
+    validation: dict | None = None,
+) -> dict[str, bool]:
+    """Detect AirPack capabilities from live data and optional validation."""
+    supported = lambda kind, address: _register_supported(
+        data, kind, address, validation
+    )
+
+    constant_flow = supported("input", 271)
+    postheater = supported("holding", 4704) and supported("holding", 4711)
+    heating_system = supported("holding", 1282) or postheater
+    cooling_system = supported("holding", 1283)
+
     return {
-        "cf": 271 in data.input,
-        "postheater": 4704 in data.holding and 4711 in data.holding,
+        # Existing aliases kept for compatibility with current platforms.
+        "cf": constant_flow,
+        "postheater": postheater,
+        # Richer model used by diagnostics/UI and future entity gating.
+        "basic_control": supported("holding", 4208)
+        and supported("holding", 4387),
+        "constant_flow": constant_flow,
+        "heating_system": heating_system,
+        "cooling_system": cooling_system,
+        "bypass_system": supported("holding", 4320)
+        and supported("holding", 4330),
+        "weekly_schedule": supported("holding", 16)
+        and supported("holding", 44)
+        and supported("holding", 72),
+        "special_modes": supported("holding", 4224),
+        "filter_monitoring": supported("holding", 4482)
+        and supported("holding", 4483),
+        "physical_inputs": bool(data.discrete),
+        "fan_output_monitoring": supported("holding", 1280)
+        and supported("holding", 1281),
+        "sensor_outside_temperature": supported("input", 16),
+        "sensor_supply_temperature": supported("input", 17),
+        "sensor_exhaust_temperature": supported("input", 18),
+        "sensor_fpx_temperature": supported("input", 19),
+        "sensor_ambient_temperature": supported("input", 22),
     }

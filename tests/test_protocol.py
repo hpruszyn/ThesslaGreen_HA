@@ -15,6 +15,8 @@ spec.loader.exec_module(protocol)
 class Data:
     holding: dict[int, int] = field(default_factory=dict)
     input: dict[int, int] = field(default_factory=dict)
+    coil: dict[int, bool] = field(default_factory=dict)
+    discrete: dict[int, bool] = field(default_factory=dict)
 
 
 class ProtocolTests(unittest.TestCase):
@@ -62,15 +64,42 @@ class ProtocolTests(unittest.TestCase):
         )
 
     def test_capabilities(self):
-        self.assertEqual(
-            protocol.detect_capabilities(
-                Data(holding={4704: 0, 4711: 1}, input={271: 1})
-            ),
-            {"cf": True, "postheater": True},
+        caps = protocol.detect_capabilities(
+            Data(
+                holding={
+                    16: 1, 44: 1, 72: 1,
+                    4208: 0, 4224: 0, 4320: 0, 4330: 0, 4387: 1,
+                    4482: 1, 4483: 1, 4704: 0, 4711: 1, 1282: 0,
+                },
+                input={16: 100, 17: 200, 18: 210, 19: 50, 22: 250, 271: 1},
+                discrete={6: False},
+            )
         )
-        self.assertEqual(
-            protocol.detect_capabilities(Data()),
-            {"cf": False, "postheater": False},
+        self.assertTrue(caps["cf"])
+        self.assertTrue(caps["postheater"])
+        self.assertTrue(caps["basic_control"])
+        self.assertTrue(caps["constant_flow"])
+        self.assertTrue(caps["heating_system"])
+        self.assertTrue(caps["bypass_system"])
+        self.assertTrue(caps["weekly_schedule"])
+        self.assertTrue(caps["physical_inputs"])
+
+        empty = protocol.detect_capabilities(Data())
+        self.assertFalse(empty["cf"])
+        self.assertFalse(empty["postheater"])
+        self.assertFalse(empty["basic_control"])
+
+    def test_validation_overrides_poll_presence(self):
+        data = Data(input={271: 1})
+        validation = {
+            "input": {
+                "supported": [],
+                "unsupported": [271],
+                "indeterminate": [],
+            }
+        }
+        self.assertFalse(
+            protocol.detect_capabilities(data, validation)["constant_flow"]
         )
 
 

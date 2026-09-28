@@ -6,6 +6,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController, ControllerData
 from .repairs import clear_write_failure_issue, create_write_failure_issue
+from .protocol import detect_capabilities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
         self.controller = controller
         self.config_entry = entry
         self.last_validation_report: dict | None = None
+        self.capabilities: dict[str, bool] = {}
 
     async def _async_update_data(self):
         try:
@@ -43,6 +45,9 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
         """Run the safe, non-brute-force register validation."""
         report = await self.controller.validate_known_registers()
         self.last_validation_report = report
+        detected = detect_capabilities(self.safe_data, report)
+        self.capabilities.clear()
+        self.capabilities.update(detected)
         return report
 
 
