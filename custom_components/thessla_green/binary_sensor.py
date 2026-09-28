@@ -14,7 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 BINARY_SENSORS = [
     # Odczyt z COILS
     {"name": "Rekuperator Silownik bypassu", "address": 9, "input_type": "coil", "icon_on": "mdi:valve-open", "icon_off": "mdi:valve-closed"},
-    {"name": "Rekuperator Potwierdzenie pracy", "address": 11, "input_type": "coil", "icon_on": "mdi:check-circle", "icon_off": "mdi:circle-outline"},
+    {"name": "Rekuperator Potwierdzenie pracy centrali", "address": 10, "input_type": "coil", "icon_on": "mdi:check-circle", "icon_off": "mdi:circle-outline"},
+    {"name": "Rekuperator Zasilanie wentylatorów", "address": 11, "input_type": "coil", "icon_on": "mdi:power-plug", "icon_off": "mdi:power-plug-off"},
 
     # Odczyt z HOLDING REGISTERS
     {"name": "Rekuperator Alarm", "address": 8192, "input_type": "holding", "device_class": "problem"},
