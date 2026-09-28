@@ -95,12 +95,7 @@ class ThesslaGreenClimate(ClimateEntity):
         self._slave = slave
         self._optimistic = OptimisticState()
         self._attr_unique_id = f"thessla_climate_{slave}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -118,9 +113,20 @@ class ThesslaGreenClimate(ClimateEntity):
             precision=1,
         )
 
+    def _temporary_mode_active(self) -> bool:
+        return self.coordinator.safe_data.holding.get(4208) == 2
+
+    def _target_temperature_address(self) -> int:
+        return 4213 if self._temporary_mode_active() else 4212
+
+    def _airflow_address(self) -> int:
+        return 4211 if self._temporary_mode_active() else 4210
+
     def _confirmed_target_temperature(self) -> float | None:
         return decode_register(
-            self.coordinator.safe_data.holding.get(4212),
+            self.coordinator.safe_data.holding.get(
+                self._target_temperature_address()
+            ),
             scale=0.5,
             precision=1,
         )
@@ -176,7 +182,7 @@ class ThesslaGreenClimate(ClimateEntity):
         return [f"{value}%" for value in sorted(set(values))]
 
     def _confirmed_fan_mode(self) -> str | None:
-        value = self.coordinator.safe_data.holding.get(4210)
+        value = self.coordinator.safe_data.holding.get(self._airflow_address())
         return None if value is None else f"{int(value)}%"
 
     @property
@@ -232,7 +238,10 @@ class ThesslaGreenClimate(ClimateEntity):
                 f"Temperatura musi być w zakresie {self._attr_min_temp}-"
                 f"{self._attr_max_temp} °C"
             )
-        confirmed = await self._write(4212, round(temperature * 2))
+        confirmed = await self._write(
+            self._target_temperature_address(),
+            round(temperature * 2),
+        )
         if confirmed is None:
             self._optimistic.set_pending("target_temperature", temperature)
         self.async_write_ha_state()
@@ -247,7 +256,7 @@ class ThesslaGreenClimate(ClimateEntity):
             raise ServiceValidationError(
                 f"Intensywność musi być w zakresie {minimum}-{maximum}%"
             )
-        confirmed = await self._write(4210, airflow)
+        confirmed = await self._write(self._airflow_address(), airflow)
         if confirmed is None:
             self._optimistic.set_pending("fan_mode", f"{airflow}%")
         self.async_write_ha_state()
