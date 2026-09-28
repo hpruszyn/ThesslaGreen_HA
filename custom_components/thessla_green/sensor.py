@@ -36,6 +36,28 @@ SENSORS = [
     {"name": "Rekuperator Intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer"},
 ]
 
+
+def _read_device_metadata(coordinator: ThesslaGreenCoordinator) -> dict:
+    """Build firmware version and serial number from AirPack input registers."""
+    inp = coordinator.safe_data.input
+    metadata: dict = {}
+
+    major = inp.get(0)
+    minor = inp.get(1)
+    patch = inp.get(4)
+    if None not in (major, minor, patch):
+        metadata["sw_version"] = f"{major}.{minor}.{patch}"
+
+    serial_regs = [inp.get(address) for address in range(24, 30)]
+    if None not in serial_regs:
+        hex_value = "".join(f"{value & 0xFF:02x}" for value in serial_regs)
+        metadata["serial_number"] = (
+            f"{hex_value[0:4]} {hex_value[4:8]} {hex_value[8:12]}"
+        )
+
+    return metadata
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -88,6 +110,7 @@ class ModbusGenericSensor(SensorEntity):
             "name": "Rekuperator Thessla",
             "manufacturer": "Thessla Green",
             "model": "Modbus Rekuperator",
+            **_read_device_metadata(coordinator),
         }
 
     @property
