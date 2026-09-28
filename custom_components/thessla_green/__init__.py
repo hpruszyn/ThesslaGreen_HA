@@ -7,10 +7,49 @@ from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
 
 import logging
+import os
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor", "switch", "binary_sensor", "select", "number"]
+
+# Lovelace card adapted from bwojtyca/ThesslaGreen_HA.
+CARD_VERSION = "3.2.1-hp1"
+CARD_URL = f"/{DOMAIN}/thessla-green-card.js"
+CARD_PATH = os.path.join(os.path.dirname(__file__), "www", "thessla-green-card.js")
+
+
+async def _register_card(hass: HomeAssistant) -> None:
+    """Serve and auto-register the bundled ThesslaGreen Lovelace card."""
+    if not os.path.exists(CARD_PATH):
+        _LOGGER.error("ThesslaGreen card not found at %s", CARD_PATH)
+        return
+
+    try:
+        from homeassistant.components.http import StaticPathConfig
+
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(CARD_URL, CARD_PATH, False)]
+        )
+    except AttributeError:
+        try:
+            hass.http.register_static_path(CARD_URL, CARD_PATH, False)
+        except Exception as error:
+            _LOGGER.error("Could not serve ThesslaGreen card: %s", error)
+            return
+    except Exception as error:
+        _LOGGER.error("Could not serve ThesslaGreen card: %s", error)
+        return
+
+    try:
+        from homeassistant.components.frontend import add_extra_js_url
+
+        add_extra_js_url(hass, f"{CARD_URL}?v={CARD_VERSION}")
+    except Exception as error:
+        _LOGGER.error("Could not register ThesslaGreen card module: %s", error)
+        return
+
+    _LOGGER.info("ThesslaGreen card registered from %s", CARD_URL)
 
 
 def _capabilities(coordinator: ThesslaGreenCoordinator) -> dict[str, bool]:
@@ -23,7 +62,8 @@ def _capabilities(coordinator: ThesslaGreenCoordinator) -> dict[str, bool]:
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up from YAML (not used)."""
+    """Set up the integration and bundled Lovelace card."""
+    await _register_card(hass)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
