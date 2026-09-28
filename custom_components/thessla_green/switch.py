@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .entity_utils import register_available
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class ModbusSwitch(SwitchEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def is_on(self) -> bool | None:

@@ -12,6 +12,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from . import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
+from .entity_utils import register_available
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -158,7 +159,9 @@ class ModbusGenericSensor(SensorEntity):
 
     @property
     def available(self):
-        return self.coordinator.last_update_success
+        return register_available(
+            self.coordinator, self._address, self._input_type
+        )
 
     @property
     def native_value(self):
@@ -214,7 +217,7 @@ class PackedFilterDateSensor(SensorEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def native_value(self) -> date | None:
@@ -495,7 +498,7 @@ class RekuScheduleSensor(SensorEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, 16, "holding")
 
     @staticmethod
     def _bcd(value: int) -> int:

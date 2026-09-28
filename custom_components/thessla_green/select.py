@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .entity_utils import register_available
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class RekuperatorOperationModeSelect(SelectEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def current_option(self) -> str | None:
@@ -179,7 +180,7 @@ class RekuperatorTrybSelect(SelectEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def current_option(self) -> str | None:
@@ -244,7 +245,7 @@ class RekuperatorSezonSelect(SelectEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def current_option(self) -> str | None:
@@ -298,7 +299,7 @@ class RekuperatorErvTrybSelect(SelectEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def current_option(self) -> str | None:
@@ -357,7 +358,7 @@ class RekuperatorKomfortSelect(SelectEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def current_option(self) -> str | None:

@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .entity_utils import register_available
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ class RekuperatorPredkoscNumber(NumberEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def native_value(self) -> float | None:
@@ -175,7 +176,7 @@ class RekuperatorConfigNumber(NumberEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(self.coordinator, self._address, "holding")
 
     @property
     def native_value(self) -> float | None:

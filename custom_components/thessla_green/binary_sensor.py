@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .entity_utils import register_available
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -121,7 +122,9 @@ class ModbusBinarySensor(BinarySensorEntity):
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success
+        return register_available(
+            self.coordinator, self._address, self._input_type
+        )
 
     @property
     def is_on(self) -> bool | None:
