@@ -34,6 +34,12 @@ SENSORS = [
     {"name": "Rekuperator Przepływ CF wywiew", "address": 275, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan"},
     {"name": "Rekuperator Intensywność min", "address": 276, "input_type": "input", "unit": "%", "icon": "mdi:speedometer-slow"},
     {"name": "Rekuperator Intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer"},
+
+    # Filtry
+    {"name": "Rekuperator Filtr nawiew zużycie", "address": 4482, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
+    {"name": "Rekuperator Filtr wywiew zużycie", "address": 4483, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
+    {"name": "Rekuperator Filtr nawiew dni", "address": 4660, "input_type": "holding", "unit": "d", "icon": "mdi:air-filter"},
+    {"name": "Rekuperator Filtr wywiew dni", "address": 4662, "input_type": "holding", "unit": "d", "icon": "mdi:air-filter"},
 ]
 
 
