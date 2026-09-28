@@ -48,7 +48,7 @@ class ThesslaGreenModbusController:
             (4224, 1), (4320, 1), (4387, 1),
             (8192, 2), (8208, 1), (8222, 2), (8330, 2), (4704, 1), (4711, 1), (8444, 1), (4304, 2)
         ]
-        self._input_blocks = [(16, 4), (22, 1), (271, 7)]
+        self._input_blocks = [(0, 5), (16, 4), (22, 1), (24, 6), (271, 7)]
         self._coil_blocks = [(9, 3)]
         self._discrete_blocks = [(0, 22)]
 
