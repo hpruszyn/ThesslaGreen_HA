@@ -13,7 +13,6 @@ _LOGGER = logging.getLogger(__name__)
 
 MODES = {
     "Brak trybu": 0,
-    "Okap": 1,
     "Kominek": 2,
     "Wietrzenie": 7,
     "Okna": 10,
