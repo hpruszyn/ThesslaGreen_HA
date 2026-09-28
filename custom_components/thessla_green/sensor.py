@@ -21,21 +21,20 @@ SENSORS = [
     {"name": "Rekuperator Temperatura Nawiew", "address": 17, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     {"name": "Rekuperator Temperatura Wywiew", "address": 18, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     {"name": "Rekuperator Temperatura za FPX", "address": 19, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
-    {"name": "Rekuperator Temperatura PCB", "address": 22, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:cpu-64-bit"},
+    {"name": "Rekuperator Temperatura otoczenia", "address": 22, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     # Przepływy
     {"name": "Rekuperator Strumień nawiew", "address": 256, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
     {"name": "Rekuperator Strumień wywiew", "address": 257, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
     # Statusy i flagi
-    {"name": "Rekuperator tryb pracy", "address": 4208, "input_type": "holding", "icon": "mdi:cog"},
     {"name": "Rekuperator speedmanual", "address": 4210, "input_type": "holding", "unit": "%", "icon": "mdi:speedometer"},
 
     # Constant Flow (FC04 / input registers)
-    {"name": "Rekuperator Wydajność rzeczywista nawiew", "address": 272, "input_type": "input", "unit": "%", "icon": "mdi:fan"},
-    {"name": "Rekuperator Wydajność rzeczywista wywiew", "address": 273, "input_type": "input", "unit": "%", "icon": "mdi:fan"},
-    {"name": "Rekuperator Przepływ CF nawiew", "address": 274, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan"},
-    {"name": "Rekuperator Przepływ CF wywiew", "address": 275, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan"},
-    {"name": "Rekuperator Intensywność min", "address": 276, "input_type": "input", "unit": "%", "icon": "mdi:speedometer-slow"},
-    {"name": "Rekuperator Intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer"},
+    {"name": "Rekuperator CF intensywność nawiew", "address": 272, "input_type": "input", "unit": "%", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność wywiew", "address": 273, "input_type": "input", "unit": "%", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF strumień nawiew", "address": 274, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF strumień wywiew", "address": 275, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność min", "address": 276, "input_type": "input", "unit": "%", "icon": "mdi:speedometer-slow", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer", "requires_cap": "cf"},
 
     # Filtry
     {"name": "Rekuperator Filtr nawiew zużycie", "address": 4482, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
@@ -77,10 +76,16 @@ async def async_setup_entry(
     modbus_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: ThesslaGreenCoordinator = modbus_data["coordinator"]
     slave = modbus_data["slave"]
+    caps = modbus_data.get("caps", {})
 
     entities = [
-        ModbusGenericSensor(coordinator=coordinator, slave=slave, **sensor)
+        ModbusGenericSensor(
+            coordinator=coordinator,
+            slave=slave,
+            **{key: value for key, value in sensor.items() if key != "requires_cap"},
+        )
         for sensor in SENSORS
+        if not sensor.get("requires_cap") or caps.get(sensor["requires_cap"], False)
     ]
 
     entities.extend(
@@ -144,7 +149,7 @@ class ModbusGenericSensor(SensorEntity):
         else:
             raw_value = self.coordinator.safe_data.holding.get(self._address)
 
-        if raw_value is None:
+        if raw_value is None or raw_value == 0x8000:
             return None
 
         # Konwersja na signed int16
@@ -306,7 +311,7 @@ class _BaseComputedSensor(SensorEntity):
 
     def _read_input_scaled(self, addr: int, scale: float, precision: int) -> float | None:
         raw = self.coordinator.safe_data.input.get(addr)
-        if raw is None:
+        if raw is None or raw == 0x8000:
             return None
         if raw > 0x7FFF:
             raw -= 0x10000

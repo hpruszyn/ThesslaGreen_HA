@@ -19,9 +19,9 @@ BINARY_SENSORS = [
 
     # Odczyt z HOLDING REGISTERS
     {"name": "Rekuperator Alarm", "address": 8192, "input_type": "holding", "device_class": "problem"},
-    {"name": "Rekuperator Constant Flow aktywny", "address": 271, "input_type": "input", "on_value": 1, "icon_on": "mdi:fan-auto", "icon_off": "mdi:fan-off"},
-    {"name": "Rekuperator Awaria CF Nawiewu", "address": 8330, "input_type": "holding", "device_class": "problem"},
-    {"name": "Rekuperator Awaria CF Wywiewu", "address": 8331, "input_type": "holding", "device_class": "problem"},
+    {"name": "Rekuperator Constant Flow aktywny", "address": 271, "input_type": "input", "on_value": 1, "icon_on": "mdi:fan-auto", "icon_off": "mdi:fan-off", "requires_cap": "cf"},
+    {"name": "Rekuperator Awaria CF Nawiewu", "address": 8330, "input_type": "holding", "device_class": "problem", "requires_cap": "cf"},
+    {"name": "Rekuperator Awaria CF Wywiewu", "address": 8331, "input_type": "holding", "device_class": "problem", "requires_cap": "cf"},
     {"name": "Rekuperator Awaria Wentylatora Nawiewu", "address": 8222, "input_type": "holding", "device_class": "problem"},
     {"name": "Rekuperator Awaria Wentylatora Wywiewu", "address": 8223, "input_type": "holding", "device_class": "problem"},
 
@@ -34,7 +34,7 @@ BINARY_SENSORS = [
     {"name": "Rekuperator FPX zabezpieczenie termiczne", "address": 8208, "input_type": "holding", "device_class": "safety"},
     {"name": "Rekuperator lato zima", "address": 4209, "input_type": "holding", "icon_on": "mdi:sun-thermometer", "icon_off": "mdi:snowflake"},
     {"name": "Rekuperator Wymiana Filtrów", "address": 8444, "input_type": "holding", "icon_on": "mdi:air-filter", "icon_off": "mdi:fan-alert"},
-    {"name": "Rekuperator Status ERV", "address": 4704, "input_type": "holding", "on_value": 0, "icon_on": "mdi:radiator", "icon_off": "mdi:radiator-off"},
+    {"name": "Rekuperator Status ERV", "address": 4704, "input_type": "holding", "on_value": 0, "icon_on": "mdi:radiator", "icon_off": "mdi:radiator-off", "requires_cap": "postheater"},
 
     # Fizyczne wejścia FC02 (Discrete Inputs)
     {"name": "Rekuperator Presostat filtrów rekuperatora", "address": 18, "input_type": "discrete", "device_class": "problem"},
@@ -63,10 +63,16 @@ async def async_setup_entry(
     modbus_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: ThesslaGreenCoordinator = modbus_data["coordinator"]
     slave = modbus_data["slave"]
+    caps = modbus_data.get("caps", {})
 
     entities = [
-        ModbusBinarySensor(coordinator=coordinator, slave=slave, **sensor)
+        ModbusBinarySensor(
+            coordinator=coordinator,
+            slave=slave,
+            **{key: value for key, value in sensor.items() if key != "requires_cap"},
+        )
         for sensor in BINARY_SENSORS
+        if not sensor.get("requires_cap") or caps.get(sensor["requires_cap"], False)
     ]
 
     async_add_entities(entities)

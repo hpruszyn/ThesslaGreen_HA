@@ -73,7 +73,7 @@ class RekuperatorPredkoscNumber(NumberEntity):
         self._slave = slave
         self._attr_name = "Rekuperator Prędkość"
         self._attr_native_unit_of_measurement = "%"
-        self._attr_native_min_value = 0
+        self._attr_native_min_value = 10
         self._attr_native_max_value = 100
         self._attr_native_step = 1
         self._attr_unique_id = f"thessla_number_{slave}_{self._address}"

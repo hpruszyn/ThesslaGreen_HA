@@ -14,7 +14,6 @@ _LOGGER = logging.getLogger(__name__)
 SWITCHES = [
     {"name": "Rekuperator bypass", "address": 4320, "command_on": 0, "command_off": 1, "verify": True},
     {"name": "Rekuperator ON/OFF", "address": 4387, "command_on": 1, "command_off": 0, "verify": True},
-    {"name": "Rekuperator mode", "address": 4208, "command_on": 0, "command_off": 1, "verify": True},
 ]
 
 async def async_setup_entry(

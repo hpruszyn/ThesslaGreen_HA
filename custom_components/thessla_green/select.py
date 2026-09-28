@@ -69,6 +69,12 @@ COMFORT_MODES = {
     "KOMFORT": 1,
 }
 
+OPERATION_MODES = {
+    "Automatyczny": 0,
+    "Manualny": 1,
+    "Chwilowy": 2,
+}
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -78,13 +84,77 @@ async def async_setup_entry(
     modbus_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: ThesslaGreenCoordinator = modbus_data["coordinator"]
     slave = modbus_data["slave"]
+    caps = modbus_data.get("caps", {})
 
-    async_add_entities([
+    entities = [
+        RekuperatorOperationModeSelect(coordinator=coordinator, slave=slave),
         RekuperatorTrybSelect(coordinator=coordinator, slave=slave),
         RekuperatorSezonSelect(coordinator=coordinator, slave=slave),
-        RekuperatorErvTrybSelect(coordinator=coordinator, slave=slave),
         RekuperatorKomfortSelect(coordinator=coordinator, slave=slave),
-    ])
+    ]
+    if caps.get("postheater", False):
+        entities.append(
+            RekuperatorErvTrybSelect(coordinator=coordinator, slave=slave)
+        )
+
+    async_add_entities(entities)
+
+
+class RekuperatorOperationModeSelect(SelectEntity):
+    """AirPack operating mode from holding register 4208."""
+
+    def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
+        self.coordinator = coordinator
+        self._address = 4208
+        self._slave = slave
+        self._attr_name = "Rekuperator Tryb pracy"
+        self._attr_options = list(OPERATION_MODES.keys())
+        self._value_map = {value: name for name, value in OPERATION_MODES.items()}
+        self._reverse_map = OPERATION_MODES
+        self._attr_unique_id = f"thessla_operation_mode_select_{slave}_{self._address}"
+        self._attr_icon = "mdi:cog"
+
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{slave}")},
+            "name": "Rekuperator Thessla",
+            "manufacturer": "Thessla Green",
+            "model": "Modbus Rekuperator",
+        }
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def current_option(self) -> str | None:
+        value = self.coordinator.safe_data.holding.get(self._address)
+        if value is None:
+            return None
+        return self._value_map.get(value)
+
+    async def async_select_option(self, option: str) -> None:
+        code = self._reverse_map.get(option)
+        if code is None:
+            _LOGGER.error("Unknown operating mode selected: %s", option)
+            return
+
+        try:
+            success = await self.coordinator.controller.write_register(
+                self._address, code
+            )
+            if success:
+                await self.coordinator.async_request_refresh()
+        except Exception as e:
+            _LOGGER.exception("Exception during operating mode selection: %s", e)
+
+    async def async_update(self):
+        """No-op, data provided by coordinator."""
+        pass
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
 
 
 class RekuperatorTrybSelect(SelectEntity):

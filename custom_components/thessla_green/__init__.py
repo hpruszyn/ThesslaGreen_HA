@@ -12,6 +12,16 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor", "switch", "binary_sensor", "select", "number"]
 
+
+def _capabilities(coordinator: ThesslaGreenCoordinator) -> dict[str, bool]:
+    """Detect optional AirPack hardware from successfully read registers."""
+    data = coordinator.safe_data
+    return {
+        "cf": 271 in data.input,
+        "postheater": 4704 in data.holding and 4711 in data.holding,
+    }
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up from YAML (not used)."""
     return True
@@ -52,6 +62,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "slave": slave,
         "scan_interval": update_interval,
+        "caps": _capabilities(coordinator),
     }
 
     # Forward setup dla każdej platformy
