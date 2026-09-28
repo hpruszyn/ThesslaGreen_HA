@@ -1,6 +1,8 @@
 from __future__ import annotations
 import logging
-from homeassistant.components.sensor import SensorEntity
+from datetime import date
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfTemperature, UnitOfTime, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -38,8 +40,11 @@ SENSORS = [
     # Filtry
     {"name": "Rekuperator Filtr nawiew zużycie", "address": 4482, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
     {"name": "Rekuperator Filtr wywiew zużycie", "address": 4483, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
-    {"name": "Rekuperator Filtr nawiew dni", "address": 4660, "input_type": "holding", "unit": "d", "icon": "mdi:air-filter"},
-    {"name": "Rekuperator Filtr wywiew dni", "address": 4662, "input_type": "holding", "unit": "d", "icon": "mdi:air-filter"},
+]
+
+FILTER_DATE_SENSORS = [
+    {"name": "Rekuperator Filtr nawiew data wymiany", "address": 4660},
+    {"name": "Rekuperator Filtr wywiew data wymiany", "address": 4662},
 ]
 
 
@@ -77,6 +82,15 @@ async def async_setup_entry(
         ModbusGenericSensor(coordinator=coordinator, slave=slave, **sensor)
         for sensor in SENSORS
     ]
+
+    entities.extend(
+        PackedFilterDateSensor(
+            coordinator=coordinator,
+            slave=slave,
+            **sensor,
+        )
+        for sensor in FILTER_DATE_SENSORS
+    )
 
     # Dodaj sensor diagnostyczny
     entities.append(ModbusUpdateIntervalSensor(coordinator=coordinator, slave=slave))
@@ -147,6 +161,68 @@ class ModbusGenericSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+
+
+class PackedFilterDateSensor(SensorEntity):
+    """Filter replacement date stored as a packed 16-bit AirPack value."""
+
+    _attr_device_class = SensorDeviceClass.DATE
+    _attr_icon = "mdi:calendar-clock"
+
+    def __init__(
+        self,
+        coordinator: ThesslaGreenCoordinator,
+        slave: int,
+        name: str,
+        address: int,
+    ):
+        self.coordinator = coordinator
+        self._slave = slave
+        self._address = address
+        self._attr_name = name
+        self._attr_unique_id = f"thessla_filter_date_{slave}_{address}"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{slave}")},
+            "name": "Rekuperator Thessla",
+            "manufacturer": "Thessla Green",
+            "model": "Modbus Rekuperator",
+            **_read_device_metadata(coordinator),
+        }
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def native_value(self) -> date | None:
+        """Decode day(b0-b4), month(b5-b8), year(b9-b15)."""
+        raw = self.coordinator.safe_data.holding.get(self._address)
+        if raw is None:
+            return None
+
+        day = raw & 0x1F
+        month = (raw >> 5) & 0x0F
+        year = 2000 + ((raw >> 9) & 0x7F)
+
+        try:
+            return date(year, month, day)
+        except ValueError:
+            _LOGGER.warning(
+                "Invalid packed filter replacement date in register %d: 0x%04X",
+                self._address,
+                raw,
+            )
+            return None
+
+    async def async_update(self):
+        """No-op, data provided by coordinator."""
+        pass
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
 
 class ModbusUpdateIntervalSensor(SensorEntity):
     """Diagnostic sensor showing time between full Modbus updates."""
