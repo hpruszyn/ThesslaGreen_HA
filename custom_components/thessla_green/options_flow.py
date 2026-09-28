@@ -13,7 +13,8 @@ class ThesslaGreenOptionsFlowHandler(config_entries.OptionsFlow):
     """Options flow for Thessla Green integration."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        """Initialize options flow."""
+        self._initial_options = dict(config_entry.options)
 
     async def async_step_init(self, user_input=None):
         hass: HomeAssistant = self.hass
@@ -39,7 +40,7 @@ class ThesslaGreenOptionsFlowHandler(config_entries.OptionsFlow):
                 )
 
         # domyślna wartość do formularza (jeśli wcześniej zapisano)
-        default_entity = self.config_entry.options.get("sensor_power")
+        default_entity = self._initial_options.get("sensor_power")
 
         return self.async_show_form(
             step_id="init",
