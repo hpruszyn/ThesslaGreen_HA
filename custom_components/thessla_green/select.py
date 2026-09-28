@@ -119,13 +119,12 @@ class RekuperatorOperationModeSelect(_OptimisticSelectEntity):
             return
 
         try:
-            success = await self.coordinator.controller.write_register(
+            confirmed = await self.coordinator.async_write_register(
                 self._address, code
             )
-            if success:
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), code)
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception("Exception during operating mode selection: %s", e)
 
@@ -182,11 +181,10 @@ class RekuperatorTrybSelect(_OptimisticSelectEntity):
                 _LOGGER.error(f"Unknown option selected: {option}")
                 return
 
-            success = await self.coordinator.controller.write_register(self._address, code)
-            if success:
+            confirmed = await self.coordinator.async_write_register(self._address, code)
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), code)
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.exception(f"Exception during tryb selection: {e}")
@@ -254,11 +252,10 @@ class RekuperatorSezonSelect(_OptimisticSelectEntity):
                 _LOGGER.error(f"Unknown option selected: {option}")
                 return
 
-            success = await self.coordinator.controller.write_register(self._address, code)
-            if success:
+            confirmed = await self.coordinator.async_write_register(self._address, code)
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), code)
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.exception(f"Exception during sezon selection: {e}")
@@ -313,13 +310,12 @@ class RekuperatorErvTrybSelect(_OptimisticSelectEntity):
                 _LOGGER.error(f"Unknown ERV option selected: {option}")
                 return
 
-            success = await self.coordinator.controller.write_register(
+            confirmed = await self.coordinator.async_write_register(
                 self._address, code
             )
-            if success:
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), code)
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.exception(f"Exception during ERV mode selection: {e}")
@@ -377,13 +373,12 @@ class RekuperatorKomfortSelect(_OptimisticSelectEntity):
                 _LOGGER.error(f"Unknown ECO/KOMFORT option selected: {option}")
                 return
 
-            success = await self.coordinator.controller.write_register(
+            confirmed = await self.coordinator.async_write_register(
                 self._address, code
             )
-            if success:
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), code)
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
 
         except Exception as e:
             _LOGGER.exception(f"Exception during ECO/KOMFORT selection: {e}")

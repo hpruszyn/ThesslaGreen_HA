@@ -83,24 +83,24 @@ class ModbusSwitch(SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the switch on."""
         try:
-            success = await self.coordinator.controller.write_register(self._address, self._command_on)
-            if success:
+            confirmed = await self.coordinator.async_write_register(
+                self._address, self._command_on
+            )
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), self._command_on)
                 self.async_write_ha_state()
-                if self._verify:
-                    await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Error turning on {self._attr_name}: {e}")
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the switch off."""
         try:
-            success = await self.coordinator.controller.write_register(self._address, self._command_off)
-            if success:
+            confirmed = await self.coordinator.async_write_register(
+                self._address, self._command_off
+            )
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), self._command_off)
                 self.async_write_ha_state()
-                if self._verify:
-                    await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Error turning off {self._attr_name}: {e}")
 

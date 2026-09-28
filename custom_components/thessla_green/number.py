@@ -130,11 +130,12 @@ class RekuperatorPredkoscNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Write speed value to the device."""
         try:
-            success = await self.coordinator.controller.write_register(self._address, int(value))
-            if success:
+            confirmed = await self.coordinator.async_write_register(
+                self._address, int(value)
+            )
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), int(value))
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Exception during setting prędkość: {e}")
 
@@ -207,13 +208,12 @@ class RekuperatorConfigNumber(NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Write register value to the device."""
         try:
-            success = await self.coordinator.controller.write_register(
+            confirmed = await self.coordinator.async_write_register(
                 self._address, int(value)
             )
-            if success:
+            if confirmed is None:
                 self._optimistic.set_pending(str(self._address), int(value))
                 self.async_write_ha_state()
-                await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(
                 "Exception while setting %s to %s: %s",

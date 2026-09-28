@@ -327,6 +327,64 @@ class ThesslaGreenModbusController:
 
             return report
 
+    async def write_register_with_readback(
+        self,
+        address: int,
+        value: int,
+    ) -> int | None:
+        """Write one holding register and immediately read back that address.
+
+        The write and read-back share the controller lock so a normal poll cannot
+        interleave between them. A successful write with an unavailable read-back
+        returns None; the entity keeps its short-lived optimistic state until the
+        next regular poll confirms the value.
+        """
+        async with self._controller_lock:
+            await self._ensure_connected()
+
+            try:
+                _LOGGER.debug(
+                    "Writing register %d = %s with targeted read-back (slave=%d)",
+                    address,
+                    value,
+                    self._slave,
+                )
+                result = await self._client.write_register(
+                    address=address,
+                    value=value,
+                    device_id=self._slave,
+                )
+                if result is None or result.isError():
+                    raise ControllerException(
+                        f"Failed to write register {address} with value {value}"
+                    )
+
+                readback = await self._client.read_holding_registers(
+                    address=address,
+                    count=1,
+                    device_id=self._slave,
+                )
+                if readback is None or readback.isError() or not readback.registers:
+                    _LOGGER.warning(
+                        "Register %d write succeeded but targeted read-back failed",
+                        address,
+                    )
+                    return None
+
+                confirmed = int(readback.registers[0])
+                _LOGGER.debug(
+                    "Register %d targeted read-back confirmed value %s",
+                    address,
+                    confirmed,
+                )
+                return confirmed
+            except ControllerException:
+                raise
+            except Exception as error:
+                raise ControllerException(
+                    f"Exception writing register {address} = {value}: {error}"
+                ) from error
+
     async def write_register(self, address: int, value: int) -> bool:
         async with self._controller_lock:
             await self._ensure_connected()

@@ -36,3 +36,24 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
         report = await self.controller.validate_known_registers()
         self.last_validation_report = report
         return report
+
+
+    async def async_write_register(self, address: int, value: int) -> int | None:
+        """Write a holding register and publish a targeted confirmed read-back."""
+        confirmed = await self.controller.write_register_with_readback(address, value)
+        if confirmed is None or self.data is None:
+            return confirmed
+
+        current = self.data
+        holding = dict(current.holding)
+        holding[address] = confirmed
+        self.async_set_updated_data(
+            ControllerData(
+                holding=holding,
+                input=dict(current.input),
+                coil=dict(current.coil),
+                discrete=dict(current.discrete),
+                update_interval=current.update_interval,
+            )
+        )
+        return confirmed
