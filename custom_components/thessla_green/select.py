@@ -13,10 +13,45 @@ _LOGGER = logging.getLogger(__name__)
 
 MODES = {
     "Brak trybu": 0,
-    "Wietrzenie": 7,
-    "Pusty Dom": 11,
+    "Okap": 1,
     "Kominek": 2,
+    "Wietrzenie": 7,
     "Okna": 10,
+    "Pusty Dom": 11,
+}
+
+# The controller can report several documented variants of the Airing function
+# depending on what triggered it. Collapse 3-9 to the canonical "Wietrzenie"
+# option so the select does not become unknown when airing is started by an
+# external input, humidity sensor, automatic mode or schedule.
+MODE_READ_MAP = {
+    0: "Brak trybu",
+    1: "Okap",
+    2: "Kominek",
+    3: "Wietrzenie",
+    4: "Wietrzenie",
+    5: "Wietrzenie",
+    6: "Wietrzenie",
+    7: "Wietrzenie",
+    8: "Wietrzenie",
+    9: "Wietrzenie",
+    10: "Okna",
+    11: "Pusty Dom",
+}
+
+SPECIAL_MODE_DETAILS = {
+    0: "Brak trybu",
+    1: "OKAP",
+    2: "KOMINEK",
+    3: "WIETRZENIE (przełącznik dzwonkowy)",
+    4: "WIETRZENIE (przełącznik ON/OFF)",
+    5: "H2O/WIETRZENIE (higrostat)",
+    6: "JP/WIETRZENIE (czujnik jakości powietrza)",
+    7: "WIETRZENIE (aktywacja ręczna)",
+    8: "WIETRZENIE (tryb automatyczny)",
+    9: "WIETRZENIE (harmonogram)",
+    10: "OTWARTE OKNA",
+    11: "PUSTY DOM",
 }
 
 SEASONS = {
@@ -62,7 +97,7 @@ class RekuperatorTrybSelect(SelectEntity):
         self._slave = slave
         self._attr_name = "Rekuperator Tryb"
         self._attr_options = list(MODES.keys())
-        self._value_map = {v: k for k, v in MODES.items()}
+        self._value_map = MODE_READ_MAP
         self._reverse_map = MODES
         self._attr_unique_id = f"thessla_select_{slave}_{self._address}"
 
@@ -103,6 +138,17 @@ class RekuperatorTrybSelect(SelectEntity):
     async def async_update(self):
         """No-op, data provided by coordinator."""
         pass
+
+    @property
+    def extra_state_attributes(self):
+        """Expose the raw special-mode code and documented trigger variant."""
+        value = self.coordinator.safe_data.holding.get(self._address)
+        if value is None:
+            return {}
+        return {
+            "special_code": value,
+            "special_mode_detail": SPECIAL_MODE_DETAILS.get(value, "Nieznany"),
+        }
 
     async def async_added_to_hass(self):
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
