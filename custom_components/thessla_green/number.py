@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 from .entity_utils import register_available
 from .optimistic import OptimisticState
 
@@ -109,12 +110,7 @@ class RekuperatorPredkoscNumber(NumberEntity):
         self._attr_native_step = 1
         self._attr_unique_id = f"thessla_number_{slave}_{self._address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -190,12 +186,7 @@ class RekuperatorConfigNumber(NumberEntity):
         self._attr_icon = icon
         self._attr_unique_id = f"thessla_number_{slave}_{address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:

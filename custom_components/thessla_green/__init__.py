@@ -7,6 +7,11 @@ from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
 from .protocol import detect_capabilities
 from .services import async_setup_services
+from .migrations import (
+    async_migrate_entry,
+    cleanup_obsolete_entities,
+    migrate_device_identifier,
+)
 
 import logging
 import os
@@ -90,6 +95,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as e:
         _LOGGER.error("Failed to fetch initial data: %s", e)
         return False
+
+    migrate_device_identifier(hass, entry, coordinator, slave)
+    cleanup_obsolete_entities(hass, slave)
 
     coordinator.capabilities.update(
         detect_capabilities(coordinator.safe_data)

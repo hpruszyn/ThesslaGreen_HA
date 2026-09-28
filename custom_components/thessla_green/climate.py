@@ -18,6 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 from .entity_utils import register_available
 from .optimistic import OptimisticState
 from .protocol import decode_register

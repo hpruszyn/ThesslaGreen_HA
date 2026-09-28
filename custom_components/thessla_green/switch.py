@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 from .entity_utils import register_available
 from .optimistic import OptimisticState
 
@@ -60,12 +61,7 @@ class ModbusSwitch(SwitchEntity):
         self._attr_name = name
         self._attr_unique_id = f"thessla_switch_{slave}_{address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:

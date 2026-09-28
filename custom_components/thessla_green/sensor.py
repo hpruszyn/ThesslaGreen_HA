@@ -12,6 +12,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from . import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 from .entity_utils import register_available
 from .protocol import (
     decode_packed_filter_date,
@@ -154,13 +155,7 @@ class ModbusGenericSensor(SensorEntity):
         self._attr_icon = icon
         self._attr_unique_id = f"thessla_sensor_{slave}_{address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-            **_read_device_metadata(coordinator),
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
@@ -210,13 +205,7 @@ class PackedFilterDateSensor(SensorEntity):
         self._address = address
         self._attr_name = name
         self._attr_unique_id = f"thessla_sensor_{slave}_{address}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-            **_read_device_metadata(coordinator),
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -260,12 +249,7 @@ class ModbusUpdateIntervalSensor(SensorEntity):
         self._attr_icon = "mdi:clock-time-eight"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
@@ -294,12 +278,7 @@ class _BaseComputedSensor(SensorEntity):
         self.coordinator = coordinator
         self._slave = slave
         self._attr_native_value = None
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
@@ -487,12 +466,7 @@ class RekuScheduleSensor(SensorEntity):
         self._attr_name = "Rekuperator Harmonogram"
         self._attr_icon = "mdi:calendar-clock"
         self._attr_unique_id = f"thessla_schedule_{slave}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:

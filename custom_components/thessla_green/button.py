@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,12 +41,7 @@ class ValidateKnownRegistersButton(ButtonEntity):
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._attr_unique_id = f"thessla_validate_known_registers_{slave}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:

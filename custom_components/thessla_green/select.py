@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
 from .entity_utils import register_available
 from .protocol import OPERATION_MODES, SPECIAL_MODE_DETAILS, SPECIAL_MODE_READ_MAP
 from .optimistic import OptimisticState
@@ -93,12 +94,7 @@ class RekuperatorOperationModeSelect(_OptimisticSelectEntity):
         self._attr_unique_id = f"thessla_operation_mode_select_{slave}_{self._address}"
         self._attr_icon = "mdi:cog"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -156,12 +152,7 @@ class RekuperatorTrybSelect(_OptimisticSelectEntity):
         self._reverse_map = MODES
         self._attr_unique_id = f"thessla_select_{slave}_{self._address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -230,12 +221,7 @@ class RekuperatorSezonSelect(_OptimisticSelectEntity):
         self._reverse_map = SEASONS
         self._attr_unique_id = f"thessla_sezon_select_{slave}_{self._address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -291,12 +277,7 @@ class RekuperatorErvTrybSelect(_OptimisticSelectEntity):
         self._reverse_map = ERV_MODES
         self._attr_unique_id = f"thessla_erv_select_{slave}_{self._address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
@@ -357,12 +338,7 @@ class RekuperatorKomfortSelect(_OptimisticSelectEntity):
         self._reverse_map = COMFORT_MODES
         self._attr_unique_id = f"thessla_komfort_select_{slave}_{self._address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self) -> bool:
