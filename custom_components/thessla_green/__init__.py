@@ -6,6 +6,7 @@ from .const import DOMAIN, CONF_HOST, CONF_PORT, CONF_SLAVE, CONF_SCAN_INTERVAL,
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
 from .protocol import detect_capabilities
+from .services import async_setup_services
 
 import logging
 import os
@@ -54,8 +55,9 @@ async def _register_card(hass: HomeAssistant) -> None:
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the integration and bundled Lovelace card."""
+    """Set up the integration, services and bundled Lovelace card."""
     await _register_card(hass)
+    await async_setup_services(hass)
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

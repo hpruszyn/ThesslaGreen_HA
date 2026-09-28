@@ -46,6 +46,22 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
         return report
 
 
+    async def async_write_trigger_register(self, address: int, value: int) -> bool:
+        """Write a self-clearing/action register without targeted read-back."""
+        try:
+            success = await self.controller.write_register(address, value)
+        except Exception:
+            create_write_failure_issue(
+                self.hass,
+                self.config_entry,
+                register=str(address),
+            )
+            raise
+
+        clear_write_failure_issue(self.hass, self.config_entry)
+        await self.async_request_refresh()
+        return success
+
     async def async_write_register(self, address: int, value: int) -> int | None:
         """Write, read back, publish confirmed state and manage Repairs."""
         try:

@@ -4,5 +4,21 @@
       "title": "Błąd zapisu Modbus",
       "description": "Thessla Green nie potwierdziła zapisu Modbus do rejestru {register}. Sprawdź bramkę RS485/Ethernet, okablowanie i połączenie z centralą. Problem zniknie automatycznie po kolejnym udanym zapisie."
     }
+  },
+  "services": {
+    "reset_filters": {
+      "name": "Reset liczników filtrów",
+      "description": "Resetuje licznik czasu pracy filtrów Thessla Green dla wybranego typu filtra.",
+      "fields": {
+        "filter_type": {
+          "name": "Typ filtra",
+          "description": "Typ filtra zamontowanego w centrali."
+        },
+        "entry_id": {
+          "name": "ID wpisu integracji",
+          "description": "Opcjonalne. Wymagane tylko przy więcej niż jednej centrali Thessla Green."
+        }
+      }
+    }
   }
 }
