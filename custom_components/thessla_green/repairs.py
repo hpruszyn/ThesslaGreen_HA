@@ -37,6 +37,7 @@ def create_write_failure_issue(
         is_persistent=False,
         severity=ir.IssueSeverity.ERROR,
         translation_key=_WRITE_FAILURE_KEY,
+        translation_placeholders={"register": register or "unknown"},
     )
 
 
