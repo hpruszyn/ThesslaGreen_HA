@@ -5,6 +5,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
@@ -90,7 +91,10 @@ class ModbusSwitch(SwitchEntity):
                 self._optimistic.set_pending(str(self._address), self._command_on)
                 self.async_write_ha_state()
         except Exception as e:
-            _LOGGER.exception(f"Error turning on {self._attr_name}: {e}")
+            _LOGGER.exception("Error turning on %s: %s", self._attr_name, e)
+            raise HomeAssistantError(
+                f"Nie udało się włączyć {self._attr_name}: {e}"
+            ) from e
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the switch off."""
@@ -102,7 +106,10 @@ class ModbusSwitch(SwitchEntity):
                 self._optimistic.set_pending(str(self._address), self._command_off)
                 self.async_write_ha_state()
         except Exception as e:
-            _LOGGER.exception(f"Error turning off {self._attr_name}: {e}")
+            _LOGGER.exception("Error turning off %s: %s", self._attr_name, e)
+            raise HomeAssistantError(
+                f"Nie udało się wyłączyć {self._attr_name}: {e}"
+            ) from e
 
     async def async_update(self) -> None:
         """Update state (no-op with coordinator)."""

@@ -1,0 +1,8 @@
+{
+  "issues": {
+    "modbus_write_failed": {
+      "title": "Błąd zapisu Modbus",
+      "description": "Thessla Green nie potwierdziła zapisu Modbus do rejestru {register}. Sprawdź bramkę RS485/Ethernet, okablowanie i połączenie z centralą. Problem zniknie automatycznie po kolejnym udanym zapisie."
+    }
+  }
+}

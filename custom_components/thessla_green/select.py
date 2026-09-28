@@ -5,6 +5,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
@@ -127,6 +128,9 @@ class RekuperatorOperationModeSelect(_OptimisticSelectEntity):
                 self.async_write_ha_state()
         except Exception as e:
             _LOGGER.exception("Exception during operating mode selection: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić trybu pracy: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -187,7 +191,10 @@ class RekuperatorTrybSelect(_OptimisticSelectEntity):
                 self.async_write_ha_state()
 
         except Exception as e:
-            _LOGGER.exception(f"Exception during tryb selection: {e}")
+            _LOGGER.exception("Exception during tryb selection: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić trybu specjalnego: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -258,7 +265,10 @@ class RekuperatorSezonSelect(_OptimisticSelectEntity):
                 self.async_write_ha_state()
 
         except Exception as e:
-            _LOGGER.exception(f"Exception during sezon selection: {e}")
+            _LOGGER.exception("Exception during sezon selection: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić sezonu: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -318,7 +328,10 @@ class RekuperatorErvTrybSelect(_OptimisticSelectEntity):
                 self.async_write_ha_state()
 
         except Exception as e:
-            _LOGGER.exception(f"Exception during ERV mode selection: {e}")
+            _LOGGER.exception("Exception during ERV mode selection: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić trybu ERV: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -381,7 +394,10 @@ class RekuperatorKomfortSelect(_OptimisticSelectEntity):
                 self.async_write_ha_state()
 
         except Exception as e:
-            _LOGGER.exception(f"Exception during ECO/KOMFORT selection: {e}")
+            _LOGGER.exception("Exception during ECO/KOMFORT selection: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić ECO/KOMFORT: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""

@@ -1,0 +1,8 @@
+{
+  "issues": {
+    "modbus_write_failed": {
+      "title": "Modbus write failed",
+      "description": "Thessla Green could not confirm a Modbus write to register {register}. Check the RS485/Ethernet gateway, cabling and device connectivity. The issue is cleared automatically after the next successful write."
+    }
+  }
+}

@@ -5,13 +5,20 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController, ControllerData
+from .repairs import clear_write_failure_issue, create_write_failure_issue
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
 
-    def __init__(self, hass, controller: ThesslaGreenModbusController, scan_interval: int):
+    def __init__(
+        self,
+        hass,
+        controller: ThesslaGreenModbusController,
+        scan_interval: int,
+        entry=None,
+    ):
         super().__init__(
             hass=hass,
             logger=_LOGGER,
@@ -19,6 +26,7 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
             update_interval=timedelta(seconds=scan_interval),
         )
         self.controller = controller
+        self.config_entry = entry
         self.last_validation_report: dict | None = None
 
     async def _async_update_data(self):
@@ -39,8 +47,21 @@ class ThesslaGreenCoordinator(DataUpdateCoordinator[ControllerData]):
 
 
     async def async_write_register(self, address: int, value: int) -> int | None:
-        """Write a holding register and publish a targeted confirmed read-back."""
-        confirmed = await self.controller.write_register_with_readback(address, value)
+        """Write, read back, publish confirmed state and manage Repairs."""
+        try:
+            confirmed = await self.controller.write_register_with_readback(
+                address, value
+            )
+        except Exception:
+            create_write_failure_issue(
+                self.hass,
+                self.config_entry,
+                register=str(address),
+            )
+            raise
+
+        clear_write_failure_issue(self.hass, self.config_entry)
+
         if confirmed is None or self.data is None:
             return confirmed
 

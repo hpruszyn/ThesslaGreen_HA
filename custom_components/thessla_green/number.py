@@ -5,6 +5,7 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
@@ -137,7 +138,10 @@ class RekuperatorPredkoscNumber(NumberEntity):
                 self._optimistic.set_pending(str(self._address), int(value))
                 self.async_write_ha_state()
         except Exception as e:
-            _LOGGER.exception(f"Exception during setting prędkość: {e}")
+            _LOGGER.exception("Exception during setting prędkość: %s", e)
+            raise HomeAssistantError(
+                f"Nie udało się ustawić prędkości rekuperatora: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
@@ -221,6 +225,9 @@ class RekuperatorConfigNumber(NumberEntity):
                 value,
                 e,
             )
+            raise HomeAssistantError(
+                f"Nie udało się ustawić {self._attr_name}: {e}"
+            ) from e
 
     async def async_update(self):
         """No-op, data provided by coordinator."""
