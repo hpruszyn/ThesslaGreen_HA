@@ -13,6 +13,33 @@ _LOGGER = logging.getLogger(__name__)
 
 SPECIAL_MODE_NUMBERS = [
     {
+        "name": "Rekuperator Kominek różnicowanie nawiewu",
+        "address": 4228,
+        "min_value": 5,
+        "max_value": 50,
+        "step": 1,
+        "unit": "%",
+        "icon": "mdi:fireplace",
+    },
+    {
+        "name": "Rekuperator Pusty dom intensywność",
+        "address": 4232,
+        "min_value": 10,
+        "max_value": 50,
+        "step": 1,
+        "unit": "%",
+        "icon": "mdi:home-export-outline",
+    },
+    {
+        "name": "Rekuperator Kominek czas",
+        "address": 4237,
+        "min_value": 1,
+        "max_value": 10,
+        "step": 1,
+        "unit": "min",
+        "icon": "mdi:timer-outline",
+    },
+    {
         "name": "Rekuperator Wietrzenie intensywność",
         "address": 4230,
         "min_value": 100,

@@ -74,10 +74,10 @@ const DEFAULT_ENTITIES = {
   // per-mode configured intensities/durations (shown on the mode tiles)
   airing_pct: `number.${DEV}rekuperator_wietrzenie_intensywnosc`, // 4230
   airing_time: `number.${DEV}rekuperator_wietrzenie_czas`, // 4233
-  away_pct: `sensor.${DEV}rekuperator_pusty_dom_intensywnosc`, // 4232
+  away_pct: `number.${DEV}rekuperator_pusty_dom_intensywnosc`, // 4232
   window_pct: `number.${DEV}rekuperator_otwarte_okna_intensywnosc_wywiewu`, // 4239
-  fireplace_pct: `sensor.${DEV}rekuperator_kominek_intensywnosc`, // 4228
-  fireplace_time: `sensor.${DEV}rekuperator_kominek_czas`, // 4237
+  fireplace_pct: `number.${DEV}rekuperator_kominek_roznicowanie_nawiewu`, // 4228
+  fireplace_time: `number.${DEV}rekuperator_kominek_czas`, // 4237
   speed_temp: `number.${DEV}rekuperator_predkosc_chwilowa`, // 4401: temporary-mode intensity
 };
 
@@ -128,10 +128,10 @@ const ENTITY_RULES = {
   schedule: { domain: "sensor", suffix: "harmonogram" },
   airing_pct: { domain: "number", suffix: "wietrzenie_intensywnosc" },
   airing_time: { domain: "number", suffix: "wietrzenie_czas" },
-  away_pct: { domain: "sensor", suffix: "pusty_dom_intensywnosc" },
+  away_pct: { domain: "number", suffix: "pusty_dom_intensywnosc" },
   window_pct: { domain: "number", suffix: ["otwarte_okna_intensywnosc_wywiewu", "okno_intensywnosc"] },
-  fireplace_pct: { domain: "sensor", suffix: "kominek_intensywnosc" },
-  fireplace_time: { domain: "sensor", suffix: "kominek_czas" },
+  fireplace_pct: { domain: "number", suffix: ["kominek_roznicowanie_nawiewu", "kominek_intensywnosc"] },
+  fireplace_time: { domain: "number", suffix: "kominek_czas" },
   speed_temp: { domain: "number", suffix: "predkosc_chwilowa" },
 };
 

@@ -25,6 +25,23 @@ SENSORS = [
     # Przepływy
     {"name": "Rekuperator Strumień nawiew", "address": 256, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
     {"name": "Rekuperator Strumień wywiew", "address": 257, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
+    {"name": "Rekuperator Strumień nominalny nawiew", "address": 4354, "input_type": "holding", "scale": 1, "precision": 0, "unit": "m3/h", "icon": "mdi:fan-chevron-up"},
+    {"name": "Rekuperator Strumień nominalny wywiew", "address": 4355, "input_type": "holding", "scale": 1, "precision": 0, "unit": "m3/h", "icon": "mdi:fan-chevron-down"},
+
+    # Wysterowanie i rozszerzona diagnostyka
+    {"name": "Rekuperator Wydajność nawiew", "address": 1280, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wydajność wywiew", "address": 1281, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Nagrzewnica", "address": 1282, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:radiator"},
+    {"name": "Rekuperator Chłodnica", "address": 1283, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:snowflake"},
+    {"name": "Rekuperator Status bypass", "address": 4330, "input_type": "holding", "icon": "mdi:valve"},
+    {"name": "Rekuperator Kod alarmu", "address": 4384, "input_type": "holding", "icon": "mdi:alert-circle-outline"},
+
+    # Temperatury i progi konfiguracyjne
+    {"name": "Rekuperator Temperatura zadana", "address": 4212, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-lines"},
+    {"name": "Rekuperator Temperatura komfort", "address": 8190, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:home-thermometer"},
+    {"name": "Rekuperator Bypass próg min", "address": 4321, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-low"},
+    {"name": "Rekuperator Bypass próg grzanie", "address": 4322, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-plus"},
+    {"name": "Rekuperator Bypass próg chłodzenie", "address": 4323, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-minus"},
     # Statusy i flagi
     {"name": "Rekuperator speedmanual", "address": 4210, "input_type": "holding", "unit": "%", "icon": "mdi:speedometer"},
 
