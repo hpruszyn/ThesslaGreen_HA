@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 
@@ -10,6 +10,7 @@ from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
 from .entity_utils import register_available
 from .protocol import OPERATION_MODES, SPECIAL_MODE_DETAILS, SPECIAL_MODE_READ_MAP
+from .optimistic import OptimisticState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +40,18 @@ COMFORT_MODES = {
     "KOMFORT": 1,
 }
 
+class _OptimisticSelectEntity(SelectEntity):
+    """Select helper with short-lived per-entity optimistic state."""
+
+    @callback
+    def _handle_coordinator_update(self):
+        self._optimistic.clear_if_confirmed(
+            str(self._address),
+            self.coordinator.safe_data.holding.get(self._address),
+        )
+        self.async_write_ha_state()
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -64,13 +77,14 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class RekuperatorOperationModeSelect(SelectEntity):
+class RekuperatorOperationModeSelect(_OptimisticSelectEntity):
     """AirPack operating mode from holding register 4208."""
 
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._address = 4208
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator Tryb pracy"
         self._attr_options = list(OPERATION_MODES.keys())
         self._value_map = {value: name for name, value in OPERATION_MODES.items()}
@@ -91,7 +105,9 @@ class RekuperatorOperationModeSelect(SelectEntity):
 
     @property
     def current_option(self) -> str | None:
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return self._value_map.get(value)
@@ -107,7 +123,8 @@ class RekuperatorOperationModeSelect(SelectEntity):
                 self._address, code
             )
             if success:
-                self.coordinator.apply_optimistic(self._address, code)
+                self._optimistic.set_pending(str(self._address), code)
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception("Exception during operating mode selection: %s", e)
@@ -118,17 +135,18 @@ class RekuperatorOperationModeSelect(SelectEntity):
 
     async def async_added_to_hass(self):
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
 
 
-class RekuperatorTrybSelect(SelectEntity):
+class RekuperatorTrybSelect(_OptimisticSelectEntity):
     """Representation of Rekuperator Tryb Select."""
 
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._address = 4224
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator Tryb"
         self._attr_options = list(MODES.keys())
         self._value_map = MODE_READ_MAP
@@ -149,7 +167,9 @@ class RekuperatorTrybSelect(SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return self._value_map.get(value)
@@ -164,7 +184,8 @@ class RekuperatorTrybSelect(SelectEntity):
 
             success = await self.coordinator.controller.write_register(self._address, code)
             if success:
-                self.coordinator.apply_optimistic(self._address, code)
+                self._optimistic.set_pending(str(self._address), code)
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -177,7 +198,9 @@ class RekuperatorTrybSelect(SelectEntity):
     @property
     def extra_state_attributes(self):
         """Expose the raw special-mode code and documented trigger variant."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return {}
         return {
@@ -186,15 +209,16 @@ class RekuperatorTrybSelect(SelectEntity):
         }
 
     async def async_added_to_hass(self):
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+        self.async_on_remove(self.coordinator.async_add_listener(self._handle_coordinator_update))
 
-class RekuperatorSezonSelect(SelectEntity):
+class RekuperatorSezonSelect(_OptimisticSelectEntity):
     """Representation of Rekuperator Sezon Select."""
 
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._address = 4209
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator Sezon"
         self._attr_options = list(SEASONS.keys())
         self._value_map = {v: k for k, v in SEASONS.items()}
@@ -215,7 +239,9 @@ class RekuperatorSezonSelect(SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return self._value_map.get(value)
@@ -230,7 +256,8 @@ class RekuperatorSezonSelect(SelectEntity):
 
             success = await self.coordinator.controller.write_register(self._address, code)
             if success:
-                self.coordinator.apply_optimistic(self._address, code)
+                self._optimistic.set_pending(str(self._address), code)
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -241,15 +268,16 @@ class RekuperatorSezonSelect(SelectEntity):
         pass
 
     async def async_added_to_hass(self):
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+        self.async_on_remove(self.coordinator.async_add_listener(self._handle_coordinator_update))
 
-class RekuperatorErvTrybSelect(SelectEntity):
+class RekuperatorErvTrybSelect(_OptimisticSelectEntity):
     """Representation of ERV mode Select."""
 
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._address = 4711
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator ERV tryb"
         self._attr_options = list(ERV_MODES.keys())
         self._value_map = {v: k for k, v in ERV_MODES.items()}
@@ -270,7 +298,9 @@ class RekuperatorErvTrybSelect(SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return self._value_map.get(value)
@@ -287,7 +317,8 @@ class RekuperatorErvTrybSelect(SelectEntity):
                 self._address, code
             )
             if success:
-                self.coordinator.apply_optimistic(self._address, code)
+                self._optimistic.set_pending(str(self._address), code)
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -299,17 +330,18 @@ class RekuperatorErvTrybSelect(SelectEntity):
 
     async def async_added_to_hass(self):
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
 
 
-class RekuperatorKomfortSelect(SelectEntity):
+class RekuperatorKomfortSelect(_OptimisticSelectEntity):
     """Representation of ECO/KOMFORT Select."""
 
     def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
         self.coordinator = coordinator
         self._address = 4304
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator ECO/KOMFORT"
         self._attr_options = list(COMFORT_MODES.keys())
         self._value_map = {v: k for k, v in COMFORT_MODES.items()}
@@ -330,7 +362,9 @@ class RekuperatorKomfortSelect(SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return self._value_map.get(value)
@@ -347,7 +381,8 @@ class RekuperatorKomfortSelect(SelectEntity):
                 self._address, code
             )
             if success:
-                self.coordinator.apply_optimistic(self._address, code)
+                self._optimistic.set_pending(str(self._address), code)
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
 
         except Exception as e:
@@ -359,5 +394,5 @@ class RekuperatorKomfortSelect(SelectEntity):
 
     async def async_added_to_hass(self):
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )

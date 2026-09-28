@@ -2,13 +2,14 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
 from .entity_utils import register_available
+from .optimistic import OptimisticState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class ModbusSwitch(SwitchEntity):
         self._command_off = command_off
         self._verify = verify
         self._slave = slave
+        self._optimistic = OptimisticState()
 
         self._attr_name = name
         self._attr_unique_id = f"thessla_switch_{slave}_{address}"
@@ -71,7 +73,9 @@ class ModbusSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the switch is on."""
-        value = self.coordinator.safe_data.holding.get(self._address)
+        value = self._optimistic.get_pending(str(self._address))
+        if value is None:
+            value = self.coordinator.safe_data.holding.get(self._address)
         if value is None:
             return None
         return value == self._command_on
@@ -81,10 +85,9 @@ class ModbusSwitch(SwitchEntity):
         try:
             success = await self.coordinator.controller.write_register(self._address, self._command_on)
             if success:
-                self.coordinator.apply_optimistic(self._address, self._command_on)
-                if not self._verify:
-                    self.async_write_ha_state()
-                else:
+                self._optimistic.set_pending(str(self._address), self._command_on)
+                self.async_write_ha_state()
+                if self._verify:
                     await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Error turning on {self._attr_name}: {e}")
@@ -94,10 +97,9 @@ class ModbusSwitch(SwitchEntity):
         try:
             success = await self.coordinator.controller.write_register(self._address, self._command_off)
             if success:
-                self.coordinator.apply_optimistic(self._address, self._command_off)
-                if not self._verify:
-                    self.async_write_ha_state()
-                else:
+                self._optimistic.set_pending(str(self._address), self._command_off)
+                self.async_write_ha_state()
+                if self._verify:
                     await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Error turning off {self._attr_name}: {e}")
@@ -107,6 +109,16 @@ class ModbusSwitch(SwitchEntity):
         # Nic nie robimy, dane aktualizuje coordinator
         pass
 
+    @callback
+    def _handle_coordinator_update(self):
+        self._optimistic.clear_if_confirmed(
+            str(self._address),
+            self.coordinator.safe_data.holding.get(self._address),
+        )
+        self.async_write_ha_state()
+
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
+        )

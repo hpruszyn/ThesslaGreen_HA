@@ -2,13 +2,14 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.number import NumberEntity
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
 from .coordinator import ThesslaGreenCoordinator
 from .entity_utils import register_available
+from .optimistic import OptimisticState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,6 +100,7 @@ class RekuperatorPredkoscNumber(NumberEntity):
         self.coordinator = coordinator
         self._address = 4210
         self._slave = slave
+        self._optimistic = OptimisticState()
         self._attr_name = "Rekuperator Prędkość"
         self._attr_native_unit_of_measurement = "%"
         self._attr_native_min_value = 10
@@ -119,7 +121,10 @@ class RekuperatorPredkoscNumber(NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the current speed value."""
+        """Return pending value first, otherwise confirmed device value."""
+        pending = self._optimistic.get_pending(str(self._address))
+        if pending is not None:
+            return pending
         return self.coordinator.safe_data.holding.get(self._address)
 
     async def async_set_native_value(self, value: float) -> None:
@@ -127,7 +132,8 @@ class RekuperatorPredkoscNumber(NumberEntity):
         try:
             success = await self.coordinator.controller.write_register(self._address, int(value))
             if success:
-                self.coordinator.apply_optimistic(self._address, int(value))
+                self._optimistic.set_pending(str(self._address), int(value))
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(f"Exception during setting prędkość: {e}")
@@ -136,9 +142,19 @@ class RekuperatorPredkoscNumber(NumberEntity):
         """No-op, data provided by coordinator."""
         pass
 
+    @callback
+    def _handle_coordinator_update(self):
+        self._optimistic.clear_if_confirmed(
+            str(self._address),
+            self.coordinator.safe_data.holding.get(self._address),
+        )
+        self.async_write_ha_state()
+
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
+        )
 
 
 class RekuperatorConfigNumber(NumberEntity):
@@ -159,6 +175,7 @@ class RekuperatorConfigNumber(NumberEntity):
         self.coordinator = coordinator
         self._address = address
         self._slave = slave
+        self._optimistic = OptimisticState()
 
         self._attr_name = name
         self._attr_native_unit_of_measurement = unit
@@ -181,7 +198,10 @@ class RekuperatorConfigNumber(NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the current register value."""
+        """Return pending value first, otherwise confirmed device value."""
+        pending = self._optimistic.get_pending(str(self._address))
+        if pending is not None:
+            return pending
         return self.coordinator.safe_data.holding.get(self._address)
 
     async def async_set_native_value(self, value: float) -> None:
@@ -191,7 +211,8 @@ class RekuperatorConfigNumber(NumberEntity):
                 self._address, int(value)
             )
             if success:
-                self.coordinator.apply_optimistic(self._address, int(value))
+                self._optimistic.set_pending(str(self._address), int(value))
+                self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.exception(
@@ -205,8 +226,16 @@ class RekuperatorConfigNumber(NumberEntity):
         """No-op, data provided by coordinator."""
         pass
 
+    @callback
+    def _handle_coordinator_update(self):
+        self._optimistic.clear_if_confirmed(
+            str(self._address),
+            self.coordinator.safe_data.holding.get(self._address),
+        )
+        self.async_write_ha_state()
+
     async def async_added_to_hass(self):
         """Register callbacks."""
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
