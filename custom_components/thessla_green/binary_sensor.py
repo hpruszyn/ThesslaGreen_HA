@@ -19,6 +19,7 @@ BINARY_SENSORS = [
 
     # Odczyt z HOLDING REGISTERS
     {"name": "Rekuperator Alarm", "address": 8192, "input_type": "holding", "device_class": "problem"},
+    {"name": "Rekuperator Constant Flow aktywny", "address": 271, "input_type": "input", "on_value": 1, "icon_on": "mdi:fan-auto", "icon_off": "mdi:fan-off"},
     {"name": "Rekuperator Awaria CF Nawiewu", "address": 8330, "input_type": "holding", "device_class": "problem"},
     {"name": "Rekuperator Awaria CF Wywiewu", "address": 8331, "input_type": "holding", "device_class": "problem"},
     {"name": "Rekuperator Awaria Wentylatora Nawiewu", "address": 8222, "input_type": "holding", "device_class": "problem"},
@@ -133,8 +134,13 @@ class ModbusBinarySensor(BinarySensorEntity):
             except Exception:
                 return bool(val)
 
-        elif self._input_type == "holding":
-            value = self.coordinator.safe_data.holding.get(self._address)
+        elif self._input_type in ("holding", "input"):
+            source = (
+                self.coordinator.safe_data.input
+                if self._input_type == "input"
+                else self.coordinator.safe_data.holding
+            )
+            value = source.get(self._address)
             if value is None:
                 return None
             return value == self._on_value
