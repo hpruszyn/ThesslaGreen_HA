@@ -14,6 +14,7 @@ class ControllerData:
     holding: Dict[int, int] = field(default_factory=dict)
     input: Dict[int, int] = field(default_factory=dict)
     coil: Dict[int, bool] = field(default_factory=dict)
+    discrete: Dict[int, bool] = field(default_factory=dict)
     update_interval: float = 0.0
 
 
@@ -49,6 +50,7 @@ class ThesslaGreenModbusController:
         ]
         self._input_blocks = [(16, 4), (22, 1)]
         self._coil_blocks = [(9, 3)]
+        self._discrete_blocks = [(0, 22)]
 
     async def stop(self):
         async with self._controller_lock:
@@ -89,6 +91,7 @@ class ThesslaGreenModbusController:
             data_holding: dict[int, int] = {}
             data_input: dict[int, int] = {}
             data_coil: dict[int, bool] = {}
+            data_discrete: dict[int, bool] = {}
 
             now = time.time()
             if self._last_update_timestamp:
@@ -179,6 +182,41 @@ class ThesslaGreenModbusController:
                     result.bits[:count],
                 )
 
+            # Read discrete inputs (FC02) for physical input states.
+            for start, count in self._discrete_blocks:
+                try:
+                    result = await self._client.read_discrete_inputs(
+                        address=start,
+                        count=count,
+                        device_id=self._slave,
+                    )
+                except Exception as e:
+                    _LOGGER.debug(
+                        "Discrete inputs %d-%d raised an exception and will be skipped: %s",
+                        start,
+                        start + count - 1,
+                        e,
+                    )
+                    continue
+
+                if result is None or result.isError():
+                    _LOGGER.debug(
+                        "Discrete inputs %d-%d failed and will be skipped",
+                        start,
+                        start + count - 1,
+                    )
+                    continue
+
+                for i, val in enumerate(result.bits[:count]):
+                    data_discrete[start + i] = bool(val)
+                read_ok += count
+                _LOGGER.debug(
+                    "Discrete inputs %d-%d read: %s",
+                    start,
+                    start + count - 1,
+                    result.bits[:count],
+                )
+
             if read_ok == 0:
                 raise ControllerException(
                     "No Modbus data could be read; device may be unreachable"
@@ -188,6 +226,7 @@ class ThesslaGreenModbusController:
                 holding=data_holding,
                 input=data_input,
                 coil=data_coil,
+                discrete=data_discrete,
                 update_interval=round(self._last_update_interval, 2)
             )
 
