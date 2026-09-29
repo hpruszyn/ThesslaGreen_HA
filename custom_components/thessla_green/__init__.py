@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", "switch", "binary_sensor", "select", "number", "button", "climate"]
 
 # Lovelace card adapted from bwojtyca/ThesslaGreen_HA.
-CARD_VERSION = "3.2.1-hp2"
+CARD_VERSION = "3.2.1-hp3"
 CARD_URL = f"/{DOMAIN}/thessla-green-card.js"
 CARD_PATH = os.path.join(os.path.dirname(__file__), "www", "thessla-green-card.js")
 

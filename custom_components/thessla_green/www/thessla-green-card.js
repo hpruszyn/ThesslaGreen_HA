@@ -18,7 +18,7 @@
  * MUST stay in Polish. Only their on-screen labels are localized.
  */
 
-const TG_VERSION = "3.2.1-hp2";
+const TG_VERSION = "3.2.1-hp3";
 
 // ---------------------------------------------------------------------------
 //  Entity handling. The card auto-detects the ThesslaGreen entities at runtime
@@ -931,6 +931,7 @@ class ThesslaGreenCard extends HTMLElement {
       statPow: q("stat-recovery"),
       statCop: q("stat-cop"),
       stFilter: q("st-filter"),
+      stFilterDate: q("st-filter-date"),
       stWearSup: q("st-wear-sup"),
       stWearExt: q("st-wear-ext"),
       statFilters: q("stat-filters"),
@@ -1556,7 +1557,7 @@ class ThesslaGreenCard extends HTMLElement {
       const parseFilterDate = (raw, label) => {
         if (!raw || raw === "unknown" || raw === "unavailable") return null;
 
-        const m = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(raw);
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
         if (!m) return null;
 
         // Noon avoids DST / midnight timezone edge cases when calculating days.
