@@ -36,10 +36,10 @@ SENSORS = [
     {"name": "Rekuperator Strumień nominalny wywiew", "address": 4355, "input_type": "holding", "scale": 1, "precision": 0, "unit": "m3/h", "icon": "mdi:fan-chevron-down"},
 
     # Wysterowanie i rozszerzona diagnostyka
-    {"name": "Rekuperator Wydajność nawiew", "address": 1280, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
-    {"name": "Rekuperator Wydajność wywiew", "address": 1281, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
-    {"name": "Rekuperator Nagrzewnica", "address": 1282, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:radiator"},
-    {"name": "Rekuperator Chłodnica", "address": 1283, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:snowflake"},
+    {"name": "Rekuperator Wysterowanie wentylatora nawiewnego", "address": 1280, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wysterowanie wentylatora wywiewnego", "address": 1281, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wysterowanie nagrzewnicy", "address": 1282, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:radiator"},
+    {"name": "Rekuperator Wysterowanie chłodnicy", "address": 1283, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:snowflake"},
     {"name": "Rekuperator Status bypass", "address": 4330, "input_type": "holding", "icon": "mdi:valve"},
     {"name": "Rekuperator Kod alarmu", "address": 4384, "input_type": "holding", "icon": "mdi:alert-circle-outline"},
 

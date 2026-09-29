@@ -18,7 +18,7 @@
  * MUST stay in Polish. Only their on-screen labels are localized.
  */
 
-const TG_VERSION = "3.2.1-hp4";
+const TG_VERSION = "3.2.1-hp5";
 
 // ---------------------------------------------------------------------------
 //  Entity handling. The card auto-detects the ThesslaGreen entities at runtime
@@ -51,8 +51,8 @@ const DEFAULT_ENTITIES = {
   alarm: `binary_sensor.${DEV}rekuperator_alarm`, // 8192: any "E" warning
   error: `binary_sensor.${DEV}rekuperator_error`, // 8193: any "S" (blocking) error
   // --- optional entities from the fork (v0.3.0+); card falls back if absent ---
-  fan_supply_pct: `sensor.${DEV}rekuperator_wydajnosc_nawiew`, // dac 1280 → control-signal % (fallback)
-  fan_extract_pct: `sensor.${DEV}rekuperator_wydajnosc_wywiew`, // dac 1281 → control-signal % (fallback)
+  fan_supply_pct: `sensor.${DEV}rekuperator_wysterowanie_wentylatora_nawiewnego`, // dac 1280 → control-signal % (fallback)
+  fan_extract_pct: `sensor.${DEV}rekuperator_wysterowanie_wentylatora_wywiewnego`, // dac 1281 → control-signal % (fallback)
   eff_sup: `sensor.${DEV}rekuperator_cf_intensywnosc_nawiew`, // 272 → requested/CF supply intensity %
   eff_ext: `sensor.${DEV}rekuperator_cf_intensywnosc_wywiew`, // 273 → requested/CF exhaust intensity %
   nom_sup: `sensor.${DEV}rekuperator_strumien_nominalny_nawiew`, // 4354 → max supply flow (m³/h)
@@ -68,8 +68,8 @@ const DEFAULT_ENTITIES = {
   bypass_heat: `sensor.${DEV}rekuperator_bypass_prog_grzanie`, // 4322: free-heating activation °C
   bypass_min: `sensor.${DEV}rekuperator_bypass_prog_min`, // 4321: min outdoor temp for bypass °C
   temp_comfort: `sensor.${DEV}rekuperator_temperatura_komfort`, // 8190: KOMFORT setpoint (bypass ref)
-  heater_pct: `sensor.${DEV}rekuperator_nagrzewnica`, // 1282: secondary/duct heater output %
-  cooler_pct: `sensor.${DEV}rekuperator_chlodnica`, // 1283: duct cooler output %
+  heater_pct: `sensor.${DEV}rekuperator_wysterowanie_nagrzewnicy`, // 1282: secondary/duct heater output %
+  cooler_pct: `sensor.${DEV}rekuperator_wysterowanie_chlodnicy`, // 1283: duct cooler output %
   schedule: `sensor.${DEV}rekuperator_harmonogram`, // parsed weekly Auto schedule (attrs)
   // per-mode configured intensities/durations (shown on the mode tiles)
   airing_pct: `number.${DEV}rekuperator_wietrzenie_intensywnosc`, // 4230
@@ -106,8 +106,8 @@ const ENTITY_RULES = {
   filter_change: { domain: "binary_sensor", suffix: "wymiana_filtrow" },
   alarm: { domain: "binary_sensor", suffix: "rekuperator_alarm" },
   error: { domain: "binary_sensor", suffix: "rekuperator_error" },
-  fan_supply_pct: { domain: "sensor", suffix: "wydajnosc_nawiew" },
-  fan_extract_pct: { domain: "sensor", suffix: "wydajnosc_wywiew" },
+  fan_supply_pct: { domain: "sensor", suffix: ["wysterowanie_wentylatora_nawiewnego", "wydajnosc_nawiew"] },
+  fan_extract_pct: { domain: "sensor", suffix: ["wysterowanie_wentylatora_wywiewnego", "wydajnosc_wywiew"] },
   eff_sup: { domain: "sensor", suffix: ["cf_intensywnosc_nawiew", "wydajnosc_rzeczywista_nawiew"] },
   eff_ext: { domain: "sensor", suffix: ["cf_intensywnosc_wywiew", "wydajnosc_rzeczywista_wywiew"] },
   nom_sup: { domain: "sensor", suffix: "strumien_nominalny_nawiew" },
@@ -123,8 +123,8 @@ const ENTITY_RULES = {
   bypass_heat: { domain: "sensor", suffix: "bypass_prog_grzanie" },
   bypass_min: { domain: "sensor", suffix: "bypass_prog_min" },
   temp_comfort: { domain: "sensor", suffix: "temperatura_komfort" },
-  heater_pct: { domain: "sensor", suffix: "nagrzewnica" },
-  cooler_pct: { domain: "sensor", suffix: "chlodnica" },
+  heater_pct: { domain: "sensor", suffix: ["wysterowanie_nagrzewnicy", "nagrzewnica"] },
+  cooler_pct: { domain: "sensor", suffix: ["wysterowanie_chlodnicy", "chlodnica"] },
   schedule: { domain: "sensor", suffix: "harmonogram" },
   airing_pct: { domain: "number", suffix: "wietrzenie_intensywnosc" },
   airing_time: { domain: "number", suffix: "wietrzenie_czas" },
