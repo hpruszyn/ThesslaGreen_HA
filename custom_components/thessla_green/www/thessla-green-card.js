@@ -18,7 +18,7 @@
  * MUST stay in Polish. Only their on-screen labels are localized.
  */
 
-const TG_VERSION = "3.2.1-hp1";
+const TG_VERSION = "3.2.1-hp2";
 
 // ---------------------------------------------------------------------------
 //  Entity handling. The card auto-detects the ThesslaGreen entities at runtime
@@ -815,13 +815,16 @@ class ThesslaGreenCard extends HTMLElement {
     const stats = STATS.filter((s) => statKeys.includes(s.key));
     const statIds = { efficiency: "st-eff", recovery: "st-pow", cop: "st-cop" };
     // Label on top, value(s) below. Only the value(s) are clickable — not the box.
-    // Filters carries three: days-to-change + supply/exhaust wear, each its own link.
+    // Filters: human-friendly deadline first, exact date + wear on a compact second line.
     const statCell = (s) =>
       s.key === "filters"
         ? `<div class="stat stat-filters" data-el="stat-filters">
              <span class="sl">${t(s.label)}</span>
-             <span class="svrow">
-               <button class="fv" data-el="st-filter" data-mref="filter_date_sup">—</button>
+             <span class="svrow filter-main">
+               <button class="fv filter-deadline" data-el="st-filter" data-mref="filter_date_sup">—</button>
+             </span>
+             <span class="filter-meta">
+               <span class="filter-date" data-el="st-filter-date">—</span>
                <span class="ss-sep">·</span>
                <button class="fv" data-el="st-wear-sup" data-mref="filter_wear_sup">—</button>
                <span class="ss-sep">/</span>
@@ -1547,17 +1550,128 @@ class ThesslaGreenCard extends HTMLElement {
     if (e.stFilter) {
       const filterAlarm = this._isOn(en.filter_change);
       if (e.statFilters) e.statFilters.classList.toggle("warn", filterAlarm);
-      const fs = this._state(en.filter_date_sup);
-      const fe = this._state(en.filter_date_ext);
-      const validDate = (v) => v && v !== "unknown" && v !== "unavailable";
-      const dates = [fs, fe].filter(validDate);
-      const dateText = dates.length === 2 && dates[0] !== dates[1]
-        ? `${dates[0]} / ${dates[1]}`
-        : dates[0] || t("ok");
-      e.stFilter.textContent = filterAlarm ? t("replace") : dateText;
-      const ws = this._num(en.filter_wear_sup), we = this._num(en.filter_wear_ext); // 4482 / 4483 wear %
-      if (e.stWearSup) e.stWearSup.textContent = ws === null ? "—" : `${Math.round(ws)}%`;
-      if (e.stWearExt) e.stWearExt.textContent = we === null ? "—" : `${Math.round(we)}%`;
+
+      const lang = pickLang(this._hass);
+
+      const parseFilterDate = (raw, label) => {
+        if (!raw || raw === "unknown" || raw === "unavailable") return null;
+
+        const m = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(raw);
+        if (!m) return null;
+
+        // Noon avoids DST / midnight timezone edge cases when calculating days.
+        const date = new Date(
+          Number(m[1]),
+          Number(m[2]) - 1,
+          Number(m[3]),
+          12, 0, 0, 0
+        );
+
+        return Number.isNaN(date.getTime())
+          ? null
+          : { raw, date, label };
+      };
+
+      const entries = [
+        parseFilterDate(
+          this._state(en.filter_date_sup),
+          lang === "pl" ? "N" : "S"
+        ),
+        parseFilterDate(
+          this._state(en.filter_date_ext),
+          lang === "pl" ? "W" : "E"
+        ),
+      ].filter(Boolean);
+
+      // If supply/exhaust dates differ, show the most urgent one as the headline.
+      const target = entries.length
+        ? [...entries].sort((a, b) => a.date - b.date)[0]
+        : null;
+
+      let relativeText = null;
+
+      if (target) {
+        const now = new Date();
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          12, 0, 0, 0
+        );
+
+        const days = Math.round(
+          (target.date.getTime() - today.getTime()) / 86400000
+        );
+
+        if (lang === "pl") {
+          if (days === 0) {
+            relativeText = "dzisiaj";
+          } else if (days === 1) {
+            relativeText = "jutro";
+          } else if (days > 1) {
+            relativeText = `za ${days} dni`;
+          } else if (days === -1) {
+            relativeText = "1 dzień po terminie";
+          } else {
+            relativeText = `${Math.abs(days)} dni po terminie`;
+          }
+        } else {
+          if (days === 0) {
+            relativeText = "today";
+          } else if (days === 1) {
+            relativeText = "tomorrow";
+          } else if (days > 1) {
+            relativeText = `in ${days} days`;
+          } else if (days === -1) {
+            relativeText = "1 day overdue";
+          } else {
+            relativeText = `${Math.abs(days)} days overdue`;
+          }
+        }
+      }
+
+      const dateFormatter = new Intl.DateTimeFormat(
+        lang === "pl" ? "pl-PL" : "en-GB",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }
+      );
+
+      let dateText = "—";
+
+      if (entries.length === 1) {
+        dateText = dateFormatter.format(entries[0].date);
+      } else if (entries.length >= 2) {
+        const supplyDate = dateFormatter.format(entries[0].date);
+        const exhaustDate = dateFormatter.format(entries[1].date);
+
+        dateText = entries[0].raw === entries[1].raw
+          ? supplyDate
+          : `${entries[0].label} ${supplyDate} · ${entries[1].label} ${exhaustDate}`;
+      }
+
+      e.stFilter.textContent = filterAlarm
+        ? t("replace")
+        : relativeText || t("ok");
+
+      e.stFilter.title = dateText !== "—" ? dateText : "";
+
+      if (e.stFilterDate) {
+        e.stFilterDate.textContent = dateText;
+      }
+
+      const ws = this._num(en.filter_wear_sup);
+      const we = this._num(en.filter_wear_ext); // 4482 / 4483 wear %
+
+      if (e.stWearSup) {
+        e.stWearSup.textContent = ws === null ? "—" : `${Math.round(ws)}%`;
+      }
+
+      if (e.stWearExt) {
+        e.stWearExt.textContent = we === null ? "—" : `${Math.round(we)}%`;
+      }
     }
 
     // Weekly schedule sections (from the Harmonogram sensor attributes).
@@ -1779,18 +1893,81 @@ class ThesslaGreenCard extends HTMLElement {
       .stats { display:flex; align-items:stretch; }
       .stat { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center;
               justify-content:flex-start; gap:2px; padding:2px 6px; }
+      .stat-filters { flex-grow:1.35; }
       .stat + .stat { border-left:1px solid var(--divider-color); }
       .stat .sl { font-size:.62rem; color:var(--secondary-text-color); text-transform:uppercase; letter-spacing:.5px; }
       .stat .sv { font-size:1.2rem; font-weight:700; color:var(--tg-accent-d);
                   font-variant-numeric:tabular-nums; line-height:1.1; cursor:pointer; transition:.15s; }
       .stat .sv:hover { opacity:.6; }
-      /* Filters pack days + both wear values side-by-side (equal weight). */
-      .stat .svrow { display:flex; align-items:baseline; gap:4px; }
+
+      /* Filter deadline gets the prominent line; exact date + wear stay compact. */
+      .stat .svrow { display:flex; align-items:baseline; justify-content:center; gap:4px; min-width:0; }
       .stat .fv { font-size:.95rem; font-weight:700; color:var(--tg-accent-d);
                   font-variant-numeric:tabular-nums; line-height:1.1; cursor:pointer; transition:.15s; }
       .stat .fv:hover { opacity:.6; }
-      .stat .ss-sep { color:var(--secondary-text-color); opacity:.45; font-size:.8rem; }
-      .stat.warn .sv, .stat.warn .fv:first-of-type { color:var(--tg-crit); }
+
+      .stat .filter-main { width:100%; }
+      .stat .filter-deadline {
+        max-width:100%;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        font-size:1.02rem;
+      }
+
+      .stat .filter-meta {
+        display:flex;
+        align-items:baseline;
+        justify-content:center;
+        gap:3px;
+        max-width:100%;
+        min-width:0;
+        white-space:nowrap;
+        color:var(--secondary-text-color);
+        font-size:.69rem;
+        line-height:1.15;
+      }
+
+      .stat .filter-date {
+        font-variant-numeric:tabular-nums;
+      }
+
+      .stat .filter-meta .fv {
+        font-size:.78rem;
+      }
+
+      .stat .ss-sep {
+        color:var(--secondary-text-color);
+        opacity:.45;
+        font-size:.75rem;
+      }
+
+      .stat.warn .sv,
+      .stat.warn .filter-deadline {
+        color:var(--tg-crit);
+      }
+
+      /* On narrow phones use 2x2 instead of squeezing all four metrics. */
+      @media (max-width:520px) {
+        .stats {
+          display:grid;
+          grid-template-columns:repeat(2, minmax(0, 1fr));
+          row-gap:8px;
+        }
+
+        .stat-filters {
+          flex-grow:1;
+        }
+
+        .stat:nth-child(odd) {
+          border-left:none;
+        }
+
+        .stat:nth-child(n+3) {
+          border-top:1px solid var(--divider-color);
+          padding-top:8px;
+        }
+      }
       /* Benefit status: green helps the goal, red works against it, muted = neutral. */
       .stat.good .sv { color:var(--tg-accent-d); }
       .stat.bad .sv { color:var(--tg-crit); }
