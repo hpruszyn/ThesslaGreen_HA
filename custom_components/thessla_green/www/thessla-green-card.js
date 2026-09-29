@@ -18,7 +18,7 @@
  * MUST stay in Polish. Only their on-screen labels are localized.
  */
 
-const TG_VERSION = "3.2.1-hp3";
+const TG_VERSION = "3.2.1-hp4";
 
 // ---------------------------------------------------------------------------
 //  Entity handling. The card auto-detects the ThesslaGreen entities at runtime
@@ -824,8 +824,6 @@ class ThesslaGreenCard extends HTMLElement {
                <button class="fv filter-deadline" data-el="st-filter" data-mref="filter_date_sup">—</button>
              </span>
              <span class="filter-meta">
-               <span class="filter-date" data-el="st-filter-date">—</span>
-               <span class="ss-sep">·</span>
                <button class="fv" data-el="st-wear-sup" data-mref="filter_wear_sup">—</button>
                <span class="ss-sep">/</span>
                <button class="fv" data-el="st-wear-ext" data-mref="filter_wear_ext">—</button>
@@ -931,7 +929,6 @@ class ThesslaGreenCard extends HTMLElement {
       statPow: q("stat-recovery"),
       statCop: q("stat-cop"),
       stFilter: q("st-filter"),
-      stFilterDate: q("st-filter-date"),
       stWearSup: q("st-wear-sup"),
       stWearExt: q("st-wear-ext"),
       statFilters: q("stat-filters"),
@@ -1659,10 +1656,6 @@ class ThesslaGreenCard extends HTMLElement {
 
       e.stFilter.title = dateText !== "—" ? dateText : "";
 
-      if (e.stFilterDate) {
-        e.stFilterDate.textContent = dateText;
-      }
-
       const ws = this._num(en.filter_wear_sup);
       const we = this._num(en.filter_wear_ext); // 4482 / 4483 wear %
 
@@ -1891,14 +1884,33 @@ class ThesslaGreenCard extends HTMLElement {
 
       /* Stats — light, borderless readouts (hairline-separated). Label on top;
          only the value(s) are clickable, not the whole box. */
-      .stats { display:flex; align-items:stretch; }
-      .stat { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center;
-              justify-content:flex-start; gap:2px; padding:2px 6px; }
-      .stat-filters { flex-grow:1.35; }
+      .stats {
+        display:grid;
+        grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr) minmax(0,.8fr) minmax(0,1.2fr);
+        align-items:stretch;
+      }
+
+      .stat {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+        gap:3px;
+        padding:2px 8px;
+      }
       .stat + .stat { border-left:1px solid var(--divider-color); }
       .stat .sl { font-size:.62rem; color:var(--secondary-text-color); text-transform:uppercase; letter-spacing:.5px; }
-      .stat .sv { font-size:1.2rem; font-weight:700; color:var(--tg-accent-d);
-                  font-variant-numeric:tabular-nums; line-height:1.1; cursor:pointer; transition:.15s; }
+      .stat .sv {
+        font-size:clamp(.95rem, 2.6vw, 1.2rem);
+        font-weight:700;
+        color:var(--tg-accent-d);
+        font-variant-numeric:tabular-nums;
+        line-height:1.1;
+        cursor:pointer;
+        transition:.15s;
+        white-space:nowrap;
+      }
       .stat .sv:hover { opacity:.6; }
 
       /* Filter deadline gets the prominent line; exact date + wear stay compact. */
@@ -1920,17 +1932,13 @@ class ThesslaGreenCard extends HTMLElement {
         display:flex;
         align-items:baseline;
         justify-content:center;
-        gap:3px;
+        gap:4px;
         max-width:100%;
         min-width:0;
         white-space:nowrap;
         color:var(--secondary-text-color);
-        font-size:.69rem;
+        font-size:.78rem;
         line-height:1.15;
-      }
-
-      .stat .filter-date {
-        font-variant-numeric:tabular-nums;
       }
 
       .stat .filter-meta .fv {
@@ -1951,13 +1959,8 @@ class ThesslaGreenCard extends HTMLElement {
       /* On narrow phones use 2x2 instead of squeezing all four metrics. */
       @media (max-width:520px) {
         .stats {
-          display:grid;
           grid-template-columns:repeat(2, minmax(0, 1fr));
           row-gap:8px;
-        }
-
-        .stat-filters {
-          flex-grow:1;
         }
 
         .stat:nth-child(odd) {
