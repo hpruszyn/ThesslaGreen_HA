@@ -1,0 +1,185 @@
+blueprint:
+  name: Thessla Green - łazienka i okna z priorytetami
+  description: >
+    Steruje trybem specjalnym Thessla Green. Otwarte okna mają najwyższy
+    priorytet. Wietrzenie łazienki uruchamia się po przekroczeniu wilgotności,
+    a wyłącza tylko wtedy, gdy aktywny kod specjalny to ręczne Wietrzenie (7).
+  domain: automation
+  input:
+    special_mode:
+      name: Tryb specjalny Thessla Green
+      selector:
+        entity:
+          domain: select
+          integration: thessla_green
+    humidity_sensor:
+      name: Czujnik wilgotności łazienki
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+    windows_group:
+      name: Grupa okien
+      description: >
+        Binary sensor/grupa będąca ON, gdy co najmniej jedno monitorowane okno
+        jest otwarte.
+      selector:
+        entity:
+          domain: binary_sensor
+    humidity_high:
+      name: Próg uruchomienia wietrzenia
+      default: 60
+      selector:
+        number:
+          min: 40
+          max: 90
+          step: 1
+          unit_of_measurement: "%"
+    humidity_low:
+      name: Próg wyłączenia wietrzenia
+      default: 55
+      selector:
+        number:
+          min: 30
+          max: 85
+          step: 1
+          unit_of_measurement: "%"
+    humidity_high_for:
+      name: Czas powyżej progu
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          unit_of_measurement: min
+    humidity_low_for:
+      name: Czas poniżej progu
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: min
+    window_open_for:
+      name: Zwłoka po otwarciu okna
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 5
+          unit_of_measurement: s
+    window_closed_for:
+      name: Zwłoka po zamknięciu wszystkich okien
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 600
+          step: 5
+          unit_of_measurement: s
+
+mode: restart
+
+variables:
+  special_entity: !input special_mode
+  humidity_entity: !input humidity_sensor
+  windows_entity: !input windows_group
+  humidity_low_value: !input humidity_low
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input humidity_sensor
+    above: !input humidity_high
+    for:
+      minutes: !input humidity_high_for
+    id: humidity_high
+  - platform: numeric_state
+    entity_id: !input humidity_sensor
+    below: !input humidity_low
+    for:
+      minutes: !input humidity_low_for
+    id: humidity_low
+  - platform: state
+    entity_id: !input windows_group
+    to: "on"
+    for:
+      seconds: !input window_open_for
+    id: windows_open
+  - platform: state
+    entity_id: !input windows_group
+    to: "off"
+    for:
+      seconds: !input window_closed_for
+    id: windows_closed
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: windows_open
+        sequence:
+          - service: select.select_option
+            target:
+              entity_id: !input special_mode
+            data:
+              option: Okna
+
+      - conditions:
+          - condition: trigger
+            id: humidity_high
+          - condition: state
+            entity_id: !input windows_group
+            state: "off"
+          - condition: template
+            value_template: >
+              {{ states(special_entity) not in ['Kominek', 'Pusty Dom', 'Okna'] }}
+        sequence:
+          - service: select.select_option
+            target:
+              entity_id: !input special_mode
+            data:
+              option: Wietrzenie
+
+      - conditions:
+          - condition: trigger
+            id: windows_closed
+          - condition: template
+            value_template: "{{ states(special_entity) == 'Okna' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states(humidity_entity) | float(0) >
+                         humidity_low_value | float(55) }}
+                sequence:
+                  - service: select.select_option
+                    target:
+                      entity_id: !input special_mode
+                    data:
+                      option: Wietrzenie
+            default:
+              - service: select.select_option
+                target:
+                  entity_id: !input special_mode
+                data:
+                  option: Brak trybu
+
+      - conditions:
+          - condition: trigger
+            id: humidity_low
+          - condition: state
+            entity_id: !input windows_group
+            state: "off"
+          - condition: template
+            value_template: >
+              {{ state_attr(special_entity, 'special_code') | int(-1) == 7 }}
+        sequence:
+          - service: select.select_option
+            target:
+              entity_id: !input special_mode
+            data:
+              option: Brak trybu

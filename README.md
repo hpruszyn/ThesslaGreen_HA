@@ -35,6 +35,15 @@
 
 ---
 
+### 🧪 Testowana instalacja sprzętowa
+
+Opis rzeczywistej instalacji używanej do rozwoju tej gałęzi — AirPack4 500v E,
+Waveshare RS485 TO POE ETH (B), Home Assistant na QNAP oraz Aqara:
+
+- [Tested AirPack4 + Waveshare installation](docs/tested_airpack4_waveshare_installation.md)
+
+---
+
 ### 📦 Instalacja
 
 #### Przez HACS

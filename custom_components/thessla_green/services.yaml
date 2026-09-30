@@ -1,0 +1,25 @@
+reset_filters:
+  name: Reset filter counters
+  description: Reset the Thessla Green filter lifetime counter for the configured filter type.
+  fields:
+    filter_type:
+      name: Filter type
+      description: Type of filter installed in the unit.
+      required: true
+      selector:
+        select:
+          options:
+            - label: Presostat
+              value: presostat
+            - label: Flat filters
+              value: flat_filters
+            - label: CleanPad
+              value: cleanpad
+            - label: CleanPad Pure
+              value: cleanpad_pure
+    entry_id:
+      name: Config entry ID
+      description: Optional. Required only when more than one Thessla Green entry is configured.
+      required: false
+      selector:
+        text:

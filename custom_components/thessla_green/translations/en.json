@@ -1,0 +1,24 @@
+{
+  "issues": {
+    "modbus_write_failed": {
+      "title": "Modbus write failed",
+      "description": "Thessla Green could not confirm a Modbus write to register {register}. Check the RS485/Ethernet gateway, cabling and device connectivity. The issue is cleared automatically after the next successful write."
+    }
+  },
+  "services": {
+    "reset_filters": {
+      "name": "Reset filter counters",
+      "description": "Reset the Thessla Green filter lifetime counter for the configured filter type.",
+      "fields": {
+        "filter_type": {
+          "name": "Filter type",
+          "description": "Type of filter installed in the unit."
+        },
+        "entry_id": {
+          "name": "Config entry ID",
+          "description": "Optional. Required only when more than one Thessla Green entry is configured."
+        }
+      }
+    }
+  }
+}

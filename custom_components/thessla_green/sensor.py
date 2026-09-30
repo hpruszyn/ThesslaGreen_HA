@@ -1,6 +1,8 @@
 from __future__ import annotations
 import logging
-from homeassistant.components.sensor import SensorEntity
+from datetime import date
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfTemperature, UnitOfTime, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -10,6 +12,13 @@ from homeassistant.helpers.event import async_track_state_change_event
 from . import DOMAIN
 from .modbus_controller import ThesslaGreenModbusController
 from .coordinator import ThesslaGreenCoordinator
+from .device_info import build_device_info
+from .entity_utils import register_available
+from .protocol import (
+    decode_packed_filter_date,
+    decode_register,
+    decode_schedule_season,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,14 +28,69 @@ SENSORS = [
     {"name": "Rekuperator Temperatura Nawiew", "address": 17, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     {"name": "Rekuperator Temperatura Wywiew", "address": 18, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     {"name": "Rekuperator Temperatura za FPX", "address": 19, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
-    {"name": "Rekuperator Temperatura PCB", "address": 22, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:cpu-64-bit"},
+    {"name": "Rekuperator Temperatura otoczenia", "address": 22, "input_type": "input", "scale": 0.1, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer"},
     # Przepływy
     {"name": "Rekuperator Strumień nawiew", "address": 256, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
     {"name": "Rekuperator Strumień wywiew", "address": 257, "input_type": "holding", "scale": 1, "precision": 1, "unit": "m3/h", "icon": "mdi:fan"},
+    {"name": "Rekuperator Strumień nominalny nawiew", "address": 4354, "input_type": "holding", "scale": 1, "precision": 0, "unit": "m3/h", "icon": "mdi:fan-chevron-up"},
+    {"name": "Rekuperator Strumień nominalny wywiew", "address": 4355, "input_type": "holding", "scale": 1, "precision": 0, "unit": "m3/h", "icon": "mdi:fan-chevron-down"},
+
+    # Wysterowanie i rozszerzona diagnostyka
+    {"name": "Rekuperator Wysterowanie wentylatora nawiewnego", "address": 1280, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wysterowanie wentylatora wywiewnego", "address": 1281, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:fan"},
+    {"name": "Rekuperator Wysterowanie nagrzewnicy", "address": 1282, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:radiator"},
+    {"name": "Rekuperator Wysterowanie chłodnicy", "address": 1283, "input_type": "holding", "scale": 0.02442, "precision": 0, "unit": "%", "icon": "mdi:snowflake"},
+    {"name": "Rekuperator Status bypass", "address": 4330, "input_type": "holding", "icon": "mdi:valve"},
+    {"name": "Rekuperator Kod alarmu", "address": 4384, "input_type": "holding", "icon": "mdi:alert-circle-outline"},
+
+    # Temperatury i progi konfiguracyjne
+    {"name": "Rekuperator Temperatura zadana", "address": 4212, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-lines"},
+    {"name": "Rekuperator Temperatura komfort", "address": 8190, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:home-thermometer"},
+    {"name": "Rekuperator Bypass próg min", "address": 4321, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-low"},
+    {"name": "Rekuperator Bypass próg grzanie", "address": 4322, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-plus"},
+    {"name": "Rekuperator Bypass próg chłodzenie", "address": 4323, "input_type": "holding", "scale": 0.5, "precision": 1, "unit": UnitOfTemperature.CELSIUS, "icon": "mdi:thermometer-minus"},
     # Statusy i flagi
-    {"name": "Rekuperator tryb pracy", "address": 4208, "input_type": "holding", "icon": "mdi:cog"},
     {"name": "Rekuperator speedmanual", "address": 4210, "input_type": "holding", "unit": "%", "icon": "mdi:speedometer"},
+
+    # Constant Flow (FC04 / input registers)
+    {"name": "Rekuperator CF intensywność nawiew", "address": 272, "input_type": "input", "unit": "%", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność wywiew", "address": 273, "input_type": "input", "unit": "%", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF strumień nawiew", "address": 274, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF strumień wywiew", "address": 275, "input_type": "input", "unit": "m3/h", "icon": "mdi:fan", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność min", "address": 276, "input_type": "input", "unit": "%", "icon": "mdi:speedometer-slow", "requires_cap": "cf"},
+    {"name": "Rekuperator CF intensywność max", "address": 277, "input_type": "input", "unit": "%", "icon": "mdi:speedometer", "requires_cap": "cf"},
+
+    # Filtry
+    {"name": "Rekuperator Filtr nawiew zużycie", "address": 4482, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
+    {"name": "Rekuperator Filtr wywiew zużycie", "address": 4483, "input_type": "holding", "unit": "%", "icon": "mdi:air-filter"},
 ]
+
+FILTER_DATE_SENSORS = [
+    {"name": "Rekuperator Filtr nawiew data wymiany", "address": 4660},
+    {"name": "Rekuperator Filtr wywiew data wymiany", "address": 4662},
+]
+
+
+def _read_device_metadata(coordinator: ThesslaGreenCoordinator) -> dict:
+    """Build firmware version and serial number from AirPack input registers."""
+    inp = coordinator.safe_data.input
+    metadata: dict = {}
+
+    major = inp.get(0)
+    minor = inp.get(1)
+    patch = inp.get(4)
+    if None not in (major, minor, patch):
+        metadata["sw_version"] = f"{major}.{minor}.{patch}"
+
+    serial_regs = [inp.get(address) for address in range(24, 30)]
+    if None not in serial_regs:
+        hex_value = "".join(f"{value & 0xFF:02x}" for value in serial_regs)
+        metadata["serial_number"] = (
+            f"{hex_value[0:4]} {hex_value[4:8]} {hex_value[8:12]}"
+        )
+
+    return metadata
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -36,11 +100,26 @@ async def async_setup_entry(
     modbus_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: ThesslaGreenCoordinator = modbus_data["coordinator"]
     slave = modbus_data["slave"]
+    caps = modbus_data.get("caps", {})
 
     entities = [
-        ModbusGenericSensor(coordinator=coordinator, slave=slave, **sensor)
+        ModbusGenericSensor(
+            coordinator=coordinator,
+            slave=slave,
+            **{key: value for key, value in sensor.items() if key != "requires_cap"},
+        )
         for sensor in SENSORS
+        if not sensor.get("requires_cap") or caps.get(sensor["requires_cap"], False)
     ]
+
+    entities.extend(
+        PackedFilterDateSensor(
+            coordinator=coordinator,
+            slave=slave,
+            **sensor,
+        )
+        for sensor in FILTER_DATE_SENSORS
+    )
 
     # Dodaj sensor diagnostyczny
     entities.append(ModbusUpdateIntervalSensor(coordinator=coordinator, slave=slave))
@@ -54,6 +133,7 @@ async def async_setup_entry(
         RekuEfficiencySensor(coordinator=coordinator, slave=slave),
         RekuRecoveryPowerSensor(coordinator=coordinator, slave=slave),
         RekuCOPSensor(coordinator=coordinator, slave=slave, power_entity=power_entity),
+        RekuScheduleSensor(coordinator=coordinator, slave=slave),
     ])
 
     async_add_entities(entities)
@@ -75,16 +155,13 @@ class ModbusGenericSensor(SensorEntity):
         self._attr_icon = icon
         self._attr_unique_id = f"thessla_sensor_{slave}_{address}"
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
-        return self.coordinator.last_update_success
+        return register_available(
+            self.coordinator, self._address, self._input_type
+        )
 
     @property
     def native_value(self):
@@ -93,16 +170,14 @@ class ModbusGenericSensor(SensorEntity):
         else:
             raw_value = self.coordinator.safe_data.holding.get(self._address)
 
-        if raw_value is None:
+        if raw_value is None or raw_value == 0x8000:
             return None
 
-        # Konwersja na signed int16
-        raw = raw_value
-        if raw > 0x7FFF:
-            raw -= 0x10000
-
-        value = raw * self._scale
-        return round(value, self._precision)
+        return decode_register(
+            raw_value,
+            scale=self._scale,
+            precision=self._precision,
+        )
 
     async def async_update(self):
         # Brak potrzeby ręcznego update — coordinator steruje
@@ -110,6 +185,57 @@ class ModbusGenericSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+
+
+class PackedFilterDateSensor(SensorEntity):
+    """Filter replacement date stored as a packed 16-bit AirPack value."""
+
+    _attr_device_class = SensorDeviceClass.DATE
+    _attr_icon = "mdi:calendar-clock"
+
+    def __init__(
+        self,
+        coordinator: ThesslaGreenCoordinator,
+        slave: int,
+        name: str,
+        address: int,
+    ):
+        self.coordinator = coordinator
+        self._slave = slave
+        self._address = address
+        self._attr_name = name
+        self._attr_unique_id = f"thessla_sensor_{slave}_{address}"
+        self._attr_device_info = build_device_info(coordinator, slave)
+
+    @property
+    def available(self) -> bool:
+        return register_available(self.coordinator, self._address, "holding")
+
+    @property
+    def native_value(self) -> date | None:
+        """Decode day(b0-b4), month(b5-b8), year(b9-b15)."""
+        raw = self.coordinator.safe_data.holding.get(self._address)
+        if raw is None:
+            return None
+
+        value = decode_packed_filter_date(raw)
+        if value is None:
+            _LOGGER.warning(
+                "Invalid packed filter replacement date in register %d: 0x%04X",
+                self._address,
+                raw,
+            )
+        return value
+
+    async def async_update(self):
+        """No-op, data provided by coordinator."""
+        pass
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
 
 class ModbusUpdateIntervalSensor(SensorEntity):
     """Diagnostic sensor showing time between full Modbus updates."""
@@ -123,12 +249,7 @@ class ModbusUpdateIntervalSensor(SensorEntity):
         self._attr_icon = "mdi:clock-time-eight"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
@@ -157,12 +278,7 @@ class _BaseComputedSensor(SensorEntity):
         self.coordinator = coordinator
         self._slave = slave
         self._attr_native_value = None
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{slave}")},
-            "name": "Rekuperator Thessla",
-            "manufacturer": "Thessla Green",
-            "model": "Modbus Rekuperator",
-        }
+        self._attr_device_info = build_device_info(coordinator, slave)
 
     @property
     def available(self):
@@ -193,7 +309,7 @@ class _BaseComputedSensor(SensorEntity):
 
     def _read_input_scaled(self, addr: int, scale: float, precision: int) -> float | None:
         raw = self.coordinator.safe_data.input.get(addr)
-        if raw is None:
+        if raw is None or raw == 0x8000:
             return None
         if raw > 0x7FFF:
             raw -= 0x10000
@@ -337,3 +453,44 @@ class RekuCOPSensor(_BaseComputedSensor):
 
         q_kw = 0.000335 * flow * (Ts - To)
         self._attr_native_value = round(q_kw / p_kw, 2) if q_kw > 0 else None
+
+
+class RekuScheduleSensor(SensorEntity):
+    """Weekly AUTO schedule decoded from holding registers 16-180."""
+
+    _attr_should_poll = False
+
+    def __init__(self, coordinator: ThesslaGreenCoordinator, slave: int):
+        self.coordinator = coordinator
+        self._slave = slave
+        self._attr_name = "Rekuperator Harmonogram"
+        self._attr_icon = "mdi:calendar-clock"
+        self._attr_unique_id = f"thessla_schedule_{slave}"
+        self._attr_device_info = build_device_info(coordinator, slave)
+
+    @property
+    def available(self) -> bool:
+        return register_available(self.coordinator, 16, "holding")
+
+    @property
+    def native_value(self):
+        season = self.coordinator.safe_data.holding.get(4209)
+        return "Zima" if season == 1 else "Lato" if season == 0 else None
+
+    @property
+    def extra_state_attributes(self):
+        holding = self.coordinator.safe_data.holding
+        if 16 not in holding:
+            return {}
+        return {
+            "season": "winter" if holding.get(4209) == 1 else "summer",
+            "airing_duration": holding.get(4233),
+            "airing_intensity": holding.get(4230),
+            "summer": decode_schedule_season(holding, 16, 72, 128),
+            "winter": decode_schedule_season(holding, 44, 100, 156),
+        }
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
